@@ -28,7 +28,7 @@ class MissionSeeder extends Seeder
             'itineraire' => 'Ouarzazate → Errachidia',
             'date_depart' => now()->addDays(1),
             'date_retour' => now()->addDays(2),
-            'statut' => 'en_attente',
+            'statut' => 'en_cours',
         ]);
 
         Mission::create([
