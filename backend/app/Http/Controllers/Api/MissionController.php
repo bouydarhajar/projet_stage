@@ -77,9 +77,10 @@ class MissionController extends Controller
 
     // employé : ses propres missions
     public function myMissions(Request $request)
-    {
-        return Mission::where('employe_id', $request->user()->id)
-            ->with('vehicle')
-            ->get();
-    }
+        {
+            return Mission::where('employe_id', $request->user()->employe_id)
+                ->with('vehicle')
+                ->get();
+        }
+
 }
