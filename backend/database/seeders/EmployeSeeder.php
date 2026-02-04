@@ -14,28 +14,28 @@ class EmployeSeeder extends Seeder
     public function run(): void
     {
         Employe::create([
+            'Doti' => '123001',
             'nom' => 'EL ATTAR',
             'prenom' => 'Houssaine',
-            'email' => 'houssaine@test.com',
-            'service' => 'Informatique',
+            'CIN' => 'CIN001',
             'fonction' => 'Technicien',
             'grade' => 'Technicien Principal'
         ]);
 
         Employe::create([
+            'Doti' => '234002',
             'nom' => 'ALAMI',
             'prenom' => 'Mohammed',
-            'email' => 'alami@test.com',
-            'service' => 'Informatique',
+            'CIN' => 'CIN002',
             'fonction' => 'Développeur',
             'grade' => 'Ingénieur d\'Etat'
         ]);
 
         Employe::create([
+            'Doti' => '123003',
             'nom' => 'BENALI',
             'prenom' => 'Fatima',
-            'email' => 'fatima@test.com',
-            'service' => 'Finance',
+            'CIN' => 'CIN003',
             'fonction' => 'Comptable',
             'grade' => 'Agent de Maîtrise'
         ]);

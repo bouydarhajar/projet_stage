@@ -8,11 +8,16 @@ use Illuminate\Http\Request;
 
 class MissionController extends Controller
 {
+     // chef de service : liste de toutes les missions
+    public function index()
+    {
+        return Mission::with(['employee','vehicle'])->get();
+    }
     // chef de service crée une mission
     public function store(Request $request)
     {
         $request->validate([
-            'employe_id' => 'required|exists:employes,id',
+            'doti_id' => 'required|exists:employes,Doti',
             'fonction' => 'required|string',
             'lieu_affectation' => 'required|string',
             'objectif' => 'required|string',
@@ -22,7 +27,7 @@ class MissionController extends Controller
         ]);
 
         $mission = Mission::create([
-            'employe_id' => $request->employe_id,
+            'doti_id' => $request->doti_id,
             'chef_service_id' => $request->user()->id,
             'fonction' => $request->fonction,
             'lieu_affectation' => $request->lieu_affectation,
@@ -35,7 +40,43 @@ class MissionController extends Controller
 
         return response()->json($mission, 201);
     }
+     // la méthode de delete un mission 
+    public function destroy($id)
+    {
+        $mission = Mission::find($id);
 
+        if (!$mission) {
+            return response()->json(['message' => 'Mission non trouvée'], 404);
+        }
+
+        $mission->delete();
+
+        return response()->json(['message' => 'Mission supprimée avec succès'], 200);
+    }
+    // la méthode Update qui peu faire des modifications sur un missions 
+    public function update(Request $request, $id)
+    {
+        $mission = Mission::find($id);
+
+        if (!$mission) {
+            return response()->json(['message' => 'Mission non trouvée'], 404);
+        }
+
+        $request->validate([
+            'doti_id' => 'sometimes|exists:employes,Doti',
+            'fonction' => 'sometimes|string',
+            'lieu_affectation' => 'sometimes|string',
+            'objectif' => 'sometimes|string',
+            'itineraire' => 'sometimes|string',
+            'date_depart' => 'sometimes|date',
+            'date_retour' => 'sometimes|date|after_or_equal:date_depart',
+            'statut' => 'sometimes|in:en_attente,en_cours,terminee,annulee',
+        ]);
+
+        $mission->update($request->all());
+
+        return response()->json($mission);
+    }
 
     // chef de parc affecte le transport
     public function setTransport(Request $request, $id)
@@ -68,19 +109,14 @@ class MissionController extends Controller
     }
 
 
-    // chef de service : liste de toutes les missions
-    public function index()
-    {
-        return Mission::with(['employee','vehicle'])->get();
-    }
-
+   
 
     // employé : ses propres missions
     public function myMissions(Request $request)
         {
-            return Mission::where('employe_id', $request->user()->employe_id)
+            return Mission::where('doti_id', $request->user()->doti_id)
                 ->with('vehicle')
                 ->get();
         }
-
+   
 }

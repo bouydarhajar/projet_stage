@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 class Mission extends Model
 {
     protected $fillable = [
-        'employe_id',
+        'doti_id',
         'chef_service_id',
         'fonction',
         'lieu_affectation',
@@ -23,7 +23,9 @@ class Mission extends Model
 
     public function employee()
     {
-        return $this->belongsTo(Employe::class, 'employe_id');
+        return $this->belongsTo(Employe::class, 'doti_id', 'doti');
+        //                                       ↑           ↑
+        //                              clé dans missions   clé dans employes
     }
 
     public function vehicle()

@@ -12,18 +12,20 @@ class Employe extends Model
     protected $table = 'employes';
 
     protected $fillable = [
+        'Doti',
         'nom',
         'prenom',
-        'email',
-        'service',
+        'CIN',
         'fonction',
         'grade'
     ];
 
-    // un employé peut avoir plusieurs missions
+        // un employé peut avoir plusieurs missions
     public function missions()
     {
-        return $this->hasMany(Mission::class, 'employe_id');
+        return $this->hasMany(Mission::class, 'doti_id', 'doti');
+        //                                     ↑           ↑
+        //                            clé dans missions   clé dans employes
     }
 
 }
