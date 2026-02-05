@@ -10,28 +10,15 @@ const Employes = () => {
   const [isMissionModalOpen, setIsMissionModalOpen] = useState(false);
   const [selectedEmploye, setSelectedEmploye] = useState(null);
   const [newMission, setNewMission] = useState({
-    numero: '',
-    service: '',
-    employe_id: '',
-    nom_employe: '',
-    Doti: '',
-    CIN: '',
-    grade: '',
+    doti_id: '',
     fonction: '',
     lieu_affectation: '',
-    destination: '',
-    objet_mission: '',
+    objectif: '',
     itineraire: '',
     date_depart: '',
-    heure_depart: '',
     date_retour: '',
-    heure_retour: '',
-    moyen_transport: '',
-    immatriculation: '',
-    kilometrage: '',
-    accompagnateurs: '',
-    date_creation: '',
-    signataire: 'Le Directeur provincial'
+    transport_type: '',
+    statut: 'brouillon'
   });
 
   // Récupération des données depuis l'API
@@ -44,14 +31,13 @@ const Employes = () => {
       setLoading(true);
       setError(null);
       
-      // Remplacer par votre URL d'API
       const response = await fetch('http://localhost:8000/api/employes', {
         method: 'GET',
         headers: {
-          'Content-Type': 'application/json',
-          // Ajoutez vos headers d'authentification si nécessaire
-          // 'Authorization': `Bearer ${token}`
-        },
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${localStorage.getItem('token')}`,
+      },
+
       });
 
       if (!response.ok) {
@@ -68,7 +54,6 @@ const Employes = () => {
     }
   };
 
-  // Fonction pour obtenir des couleurs aléatoires pour les avatars
   const getRandomColor = () => {
     const colors = [
       'bg-blue-500', 'bg-emerald-500', 'bg-rose-500', 'bg-amber-500',
@@ -77,14 +62,12 @@ const Employes = () => {
     return colors[Math.floor(Math.random() * colors.length)];
   };
 
-  // Ajouter les initiales et couleurs aux employés
   const formattedEmployes = employes.map(emp => ({
     ...emp,
     initiales: `${emp.prenom?.charAt(0) || ''}${emp.nom?.charAt(0) || ''}`.toUpperCase(),
     color: getRandomColor()
   }));
 
-  // Filtrer les employés selon la recherche et l'onglet actif
   const filteredEmployes = formattedEmployes.filter(employe => {
     const matchesSearch = 
       employe.nom?.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -100,7 +83,6 @@ const Employes = () => {
     return matchesSearch;
   });
 
-  // Compter les employés par statut
   const getTabCount = (status) => {
     if (status === 'all') return employes.length;
     return employes.filter(emp => emp.statut === status).length;
@@ -109,43 +91,27 @@ const Employes = () => {
   const handleAddMission = (employe) => {
     setSelectedEmploye(employe);
     
-    // Initialiser les données de la mission avec les informations de l'employé
-    const currentDate = new Date();
-    const missionNumber = `${currentDate.getFullYear()}/${Math.floor(Math.random() * 1000)}`;
-    
     setNewMission({
-      numero: missionNumber,
-      service: 'Service ......',
-      employe_id: employe.id,
-      nom_employe: `${employe.nom} ${employe.prenom}`,
-      Doti: employe.Doti,
-      CIN: employe.CIN,
-      grade: employe.grade,
+      doti_id: employe.Doti,
       fonction: employe.fonction,
       lieu_affectation: 'Direction provinciale du MENPS Ouarzazate',
-      date_creation: formatDate(currentDate),
-      signataire: 'Le Directeur provincial',
-      destination: '',
-      objet_mission: '',
+      objectif: '',
       itineraire: '',
       date_depart: '',
-      heure_depart: '',
       date_retour: '',
-      heure_retour: '',
-      moyen_transport: '',
-      immatriculation: '',
-      kilometrage: '',
-      accompagnateurs: ''
+      transport_type: '',
+      statut: 'brouillon'
     });
     
     setIsMissionModalOpen(true);
   };
 
-  const formatDate = (date) => {
-    const day = date.getDate().toString().padStart(2, '0');
-    const month = (date.getMonth() + 1).toString().padStart(2, '0');
-    const year = date.getFullYear();
-    return `${day}/${month}/${year}`;
+  // Convertir la date du format input (YYYY-MM-DD) vers YYYY-MM-DD pour l'API
+  const handleDateChange = (field, value) => {
+    setNewMission(prev => ({
+      ...prev,
+      [field]: value
+    }));
   };
 
   const handleSaveMission = async () => {
@@ -153,42 +119,170 @@ const Employes = () => {
 
     try {
       // Validation des champs obligatoires
-      if (!newMission.destination || !newMission.objet_mission || !newMission.date_depart || !newMission.date_retour) {
+      if (!newMission.objectif || !newMission.itineraire || !newMission.date_depart || !newMission.date_retour) {
         alert('Veuillez remplir tous les champs obligatoires');
         return;
       }
 
-      // Envoi de la mission à l'API
+      // Préparer les données pour l'API selon le format attendu par MissionController
+      const missionData = {
+        doti_id: newMission.doti_id,
+        fonction: newMission.fonction,
+        lieu_affectation: newMission.lieu_affectation,
+        objectif: newMission.objectif,
+        itineraire: newMission.itineraire,
+        date_depart: newMission.date_depart,
+        date_retour: newMission.date_retour,
+        transport_type: newMission.transport_type,
+        statut: 'en_attente' // Selon le contrôleur, statut par défaut
+      };
+
+      console.log('Données envoyées à l\'API:', missionData);
+
+      // Envoyer à l'API avec gestion d'erreur améliorée
       const response = await fetch('http://localhost:8000/api/missions', {
         method: 'POST',
-        headers: {
+       headers: {
           'Content-Type': 'application/json',
-          // 'Authorization': `Bearer ${token}`
+          'Accept': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
         },
-        body: JSON.stringify(newMission)
+        body: JSON.stringify(missionData)
       });
 
-      if (!response.ok) {
-        throw new Error('Erreur lors de la création de la mission');
+      // Vérifier le type de contenu de la réponse
+      const contentType = response.headers.get('content-type');
+      
+      if (!contentType || !contentType.includes('application/json')) {
+        // Si la réponse n'est pas du JSON, lire le texte pour voir ce qui est retourné
+        const text = await response.text();
+        console.error('Réponse non-JSON:', text.substring(0, 500));
+        
+        if (text.includes('<!DOCTYPE')) {
+          throw new Error('L\'API a retourné une page HTML au lieu de JSON. Vérifiez que l\'endpoint API existe et fonctionne correctement.');
+        }
+        
+        throw new Error(`Réponse serveur inattendue: ${text.substring(0, 100)}...`);
       }
 
       const data = await response.json();
+
+      if (!response.ok) {
+        // Gérer les erreurs de validation ou autres erreurs du serveur
+        if (data.errors) {
+          const errorMessages = Object.values(data.errors).flat().join(', ');
+          throw new Error(`Erreur de validation: ${errorMessages}`);
+        }
+        throw new Error(data.message || 'Erreur lors de la création de la mission');
+      }
+
       alert('Ordre de mission créé avec succès!');
       setIsMissionModalOpen(false);
-      setNewMission({});
+      resetMissionForm();
       
-      // Rafraîchir la liste des employés si nécessaire
+      // Rafraîchir la liste des employés
       fetchEmployes();
     } catch (err) {
-      console.error('Erreur:', err);
+      console.error('Erreur complète:', err);
       alert('Erreur lors de la création de la mission: ' + err.message);
     }
+  };
+
+  const handleSendToChefParc = async () => {
+    if (!selectedEmploye) return;
+
+    try {
+      // Validation des champs obligatoires
+      if (!newMission.objectif || !newMission.itineraire || !newMission.date_depart || !newMission.date_retour) {
+        alert('Veuillez remplir tous les champs obligatoires');
+        return;
+      }
+
+      // Préparer les données pour l'API (statut en attente)
+      const missionData = {
+        doti_id: newMission.doti_id,
+        fonction: newMission.fonction,
+        lieu_affectation: newMission.lieu_affectation,
+        objectif: newMission.objectif,
+        itineraire: newMission.itineraire,
+        date_depart: newMission.date_depart,
+        date_retour: newMission.date_retour,
+        transport_type: newMission.transport_type,
+        statut: 'en_attente'
+      };
+
+      console.log('Envoi au chef de parc:', missionData);
+
+      const response = await fetch('http://localhost:8000/api/missions', {
+        method: 'POST',
+        headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'Authorization': `Bearer ${localStorage.getItem('token')}`,
+      },
+
+        body: JSON.stringify(missionData)
+      });
+
+      // Vérifier le type de contenu de la réponse
+      const contentType = response.headers.get('content-type');
+      
+      if (!contentType || !contentType.includes('application/json')) {
+        const text = await response.text();
+        console.error('Réponse non-JSON:', text.substring(0, 500));
+        
+        if (text.includes('<!DOCTYPE')) {
+          throw new Error('L\'API a retourné une page HTML au lieu de JSON. Vérifiez que l\'endpoint API existe et fonctionne correctement.');
+        }
+        
+        throw new Error(`Réponse serveur inattendue: ${text.substring(0, 100)}...`);
+      }
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        if (data.errors) {
+          const errorMessages = Object.values(data.errors).flat().join(', ');
+          throw new Error(`Erreur de validation: ${errorMessages}`);
+        }
+        throw new Error(data.message || 'Erreur lors de l\'envoi au chef de parc');
+      }
+
+      alert('Ordre de mission envoyé au chef de parc avec succès!');
+      setIsMissionModalOpen(false);
+      resetMissionForm();
+    } catch (err) {
+      console.error('Erreur complète:', err);
+      alert('Erreur lors de l\'envoi: ' + err.message);
+    }
+  };
+
+  const resetMissionForm = () => {
+    setNewMission({
+      doti_id: '',
+      fonction: '',
+      lieu_affectation: '',
+      objectif: '',
+      itineraire: '',
+      date_depart: '',
+      date_retour: '',
+      transport_type: '',
+      statut: 'brouillon'
+    });
   };
 
   const handleMissionChange = (field, value) => {
     setNewMission(prev => ({
       ...prev,
       [field]: value
+    }));
+  };
+
+  const handleTransportChange = (transport) => {
+    setNewMission(prev => ({
+      ...prev,
+      transport_type: transport === 'voiture de service' ? 'voiture' : transport
+      
     }));
   };
 
@@ -201,9 +295,10 @@ const Employes = () => {
       const response = await fetch(`http://localhost:8000/api/employes/${id}`, {
         method: 'DELETE',
         headers: {
-          'Content-Type': 'application/json',
-          // 'Authorization': `Bearer ${token}`
-        }
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${localStorage.getItem('token')}`,
+      },
+
       });
 
       if (!response.ok) {
@@ -211,7 +306,6 @@ const Employes = () => {
       }
 
       alert('Employé supprimé avec succès!');
-      // Rafraîchir la liste
       fetchEmployes();
     } catch (err) {
       console.error('Erreur:', err);
@@ -219,7 +313,201 @@ const Employes = () => {
     }
   };
 
-  // Affichage du loader
+  // Fonction d'impression modifiée selon la règle
+  const handlePrint = () => {
+    // Vérifier si le moyen de transport est "voiture de service" ou "voiture"
+    if (newMission.transport_type === 'voiture de service' || newMission.transport_type === 'voiture') {
+      alert('L\'impression n\'est pas autorisée pour les missions en voiture de service.');
+      return;
+    }
+
+    // Créer une nouvelle fenêtre pour l'impression
+    const printWindow = window.open('', '_blank', 'width=800,height=600');
+    
+    if (!printWindow) {
+      alert('Veuillez autoriser les pop-ups pour imprimer le document.');
+      return;
+    }
+
+    // HTML pour l'impression
+    const printContent = `
+      <!DOCTYPE html>
+      <html lang="fr">
+      <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Ordre de Mission</title>
+        <style>
+          @page {
+            size: A4;
+            margin: 20mm;
+          }
+          body {
+            font-family: 'Times New Roman', serif;
+            line-height: 1.5;
+            color: #000;
+            margin: 0;
+            padding: 0;
+          }
+          .print-container {
+            max-width: 210mm;
+            margin: 0 auto;
+            padding: 20mm;
+          }
+          .header {
+            text-align: center;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #000;
+            padding-bottom: 10px;
+          }
+          .header h1 {
+            font-size: 18pt;
+            margin: 5px 0;
+            font-weight: bold;
+          }
+          .header h2 {
+            font-size: 16pt;
+            margin: 10px 0;
+          }
+          .header h3 {
+            font-size: 14pt;
+            margin: 5px 0;
+            font-weight: normal;
+          }
+          .order-title {
+            text-align: center;
+            font-size: 20pt;
+            font-weight: bold;
+            text-decoration: underline;
+            margin: 20px 0;
+          }
+          .order-info {
+            margin-bottom: 20px;
+            font-size: 12pt;
+          }
+          .form-section {
+            margin-bottom: 15px;
+          }
+          .form-row {
+            display: flex;
+            align-items: baseline;
+            margin-bottom: 8px;
+          }
+          .form-label {
+            font-weight: bold;
+            min-width: 150px;
+          }
+          .form-value {
+            flex: 1;
+            border-bottom: 1px dotted #000;
+            padding-left: 10px;
+          }
+          .signature-section {
+            margin-top: 50px;
+            display: flex;
+            justify-content: space-between;
+          }
+          .signature-box {
+            text-align: center;
+            width: 40%;
+          }
+          .signature-line {
+            border-top: 1px solid #000;
+            width: 200px;
+            margin: 40px auto 5px;
+          }
+          .no-print {
+            display: none !important;
+          }
+          @media print {
+            .no-print {
+              display: none !important;
+            }
+          }
+        </style>
+      </head>
+      <body>
+        <div class="print-container">
+          <div class="header">
+            <h1>ROYAUME DU MAROC</h1>
+            <h2>Ministère de l'Éducation Nationale, du Préscolaire et des Sports</h2>
+            <h3>Direction Provinciale de Ouarzazate</h3>
+          </div>
+          
+          <div class="order-title">
+            ORDRE DE MISSION
+          </div>
+          
+          <div class="order-info">
+            <div><strong>Employé:</strong> ${selectedEmploye ? `${selectedEmploye.nom} ${selectedEmploye.prenom}` : ''}</div>
+            <div><strong>DOTI:</strong> ${newMission.doti_id || ''}</div>
+            <div><strong>Fonction:</strong> ${newMission.fonction || ''}</div>
+          </div>
+          
+          <div class="form-section">
+            <div class="form-row">
+              <span class="form-label">Lieu d'Affectation :</span>
+              <span class="form-value">${newMission.lieu_affectation || ''}</span>
+            </div>
+            
+            <div class="form-row">
+              <span class="form-label">Objectif de la Mission :</span>
+              <span class="form-value">${newMission.objectif || ''}</span>
+            </div>
+            
+            <div class="form-row">
+              <span class="form-label">Itinéraire :</span>
+              <span class="form-value">${newMission.itineraire || ''}</span>
+            </div>
+            
+            <div class="form-row">
+              <span class="form-label">Date de Départ :</span>
+              <span class="form-value">${newMission.date_depart || ''}</span>
+            </div>
+            
+            <div class="form-row">
+              <span class="form-label">Date de Retour :</span>
+              <span class="form-value">${newMission.date_retour || ''}</span>
+            </div>
+            
+            <div class="form-row">
+              <span class="form-label">Moyen de Transport :</span>
+              <span class="form-value">${newMission.transport_type || ''}</span>
+            </div>
+          </div>
+          
+          <div class="signature-section">
+            <div>
+              <p><strong>Fait à Ouarzazate le :</strong></p>
+              <p>${new Date().toLocaleDateString('fr-FR')}</p>
+            </div>
+            <div class="signature-box">
+              <div class="signature-line"></div>
+              <p><strong>Le Directeur provincial</strong></p>
+            </div>
+          </div>
+        </div>
+        
+        <script>
+          window.onload = function() {
+            setTimeout(function() {
+              window.print();
+              setTimeout(function() {
+                window.close();
+              }, 100);
+            }, 100);
+          };
+        </script>
+      </body>
+      </html>
+    `;
+
+    // Écrire le contenu et imprimer
+    printWindow.document.open();
+    printWindow.document.write(printContent);
+    printWindow.document.close();
+  };
+
   if (loading) {
     return (
       <div className="p-8 bg-slate-50 min-h-screen flex items-center justify-center">
@@ -231,7 +519,6 @@ const Employes = () => {
     );
   }
 
-  // Affichage de l'erreur
   if (error) {
     return (
       <div className="p-8 bg-slate-50 min-h-screen flex items-center justify-center">
@@ -276,7 +563,7 @@ const Employes = () => {
 
       {/* Main Content */}
       <div className="bg-white rounded-2xl shadow-xl border border-slate-200 overflow-hidden">
-        {/* Header avec logo institutionnel */}
+        {/* Header */}
         <div className="p-6 border-b border-slate-200 bg-gradient-to-r from-blue-50 to-white">
           <div className="flex items-center justify-between">
             <div className="text-right">
@@ -380,7 +667,6 @@ const Employes = () => {
           ) : (
             filteredEmployes.map((employe) => (
               <div key={employe.id} className="grid grid-cols-12 gap-4 px-6 py-5 hover:bg-slate-50 transition-all group">
-                {/* Employee Info */}
                 <div className="col-span-2 flex items-center gap-3">
                   <div className={`w-12 h-12 ${employe.color} rounded-xl flex items-center justify-center text-white font-bold shadow-lg`}>
                     {employe.initiales}
@@ -392,33 +678,28 @@ const Employes = () => {
                   </div>
                 </div>
 
-                {/* Doti */}
                 <div className="col-span-1 flex items-center">
                   <span className="text-sm font-medium text-slate-700 bg-slate-100 px-2 py-1 rounded">
                     {employe.Doti}
                   </span>
                 </div>
 
-                {/* Grade */}
                 <div className="col-span-3 flex items-center">
                   <span className="text-sm text-slate-700">{employe.grade}</span>
                 </div>
 
-                {/* CIN */}
                 <div className="col-span-1 flex items-center">
                   <span className="text-sm font-mono text-slate-700 bg-slate-50 px-2 py-1 rounded border">
                     {employe.CIN}
                   </span>
                 </div>
 
-                {/* Fonction */}
                 <div className="col-span-3 flex items-center">
                   <div className="space-y-1">
                     <span className="text-sm text-slate-700">{employe.fonction}</span>
                   </div>
                 </div>
 
-                {/* Actions */}
                 <div className="col-span-2 flex items-center justify-end gap-2">
                   <button
                     onClick={() => handleAddMission(employe)}
@@ -470,21 +751,17 @@ const Employes = () => {
         )}
       </div>
 
-      {/* Modal Ordre de Mission */}
+      {/* Modal Ordre de Mission SIMPLIFIÉ */}
       {isMissionModalOpen && selectedEmploye && (
         <div className="fixed inset-0 z-50 overflow-y-auto bg-black bg-opacity-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl">
-            {/* En-tête avec logo institutionnel */}
-            <div className="bg-gradient-to-r from-blue-600 to-blue-800 text-white p-6 rounded-t-2xl">
-              <div className="flex items-center justify-between">
+          <div className="bg-white w-full max-w-2xl max-h-[95vh] overflow-y-auto rounded-xl shadow-2xl">
+            
+            {/* En-tête */}
+            <div className="bg-gradient-to-r from-blue-600 to-blue-800 text-white p-6 rounded-t-xl">
+              <div className="flex justify-between items-center">
                 <div>
-                  <div className="text-xs opacity-90">Royaume du Maroc</div>
-                  <h2 className="text-2xl font-bold mt-1">ORDRE DE MISSION</h2>
-                  <div className="text-sm mt-2 opacity-90">
-                    Ministère de l'Éducation Nationale, du Préscolaire et des sports
-                    <br />
-                    Direction Provinciale de Ouarzazate
-                  </div>
+                  <h2 className="text-2xl font-bold">Nouvel Ordre de Mission</h2>
+                  <p className="opacity-90">Pour: {selectedEmploye.nom} {selectedEmploye.prenom}</p>
                 </div>
                 <button
                   onClick={() => setIsMissionModalOpen(false)}
@@ -495,296 +772,221 @@ const Employes = () => {
                   </svg>
                 </button>
               </div>
-              <div className="mt-4 flex items-center justify-between text-sm">
-                <div className="bg-white/20 px-4 py-2 rounded-lg">
-                  N°: <span className="font-bold">{newMission.numero}</span>
-                </div>
-                <div>
-                  Service: <span className="font-bold">{newMission.service}</span>
-                </div>
-              </div>
             </div>
 
-            {/* Contenu du formulaire */}
-            <div className="p-8 space-y-6">
-              {/* Informations de l'employé */}
-              <div className="border-2 border-blue-200 rounded-xl p-6 bg-blue-50">
-                <div className="grid grid-cols-2 gap-6">
+            {/* Formulaire simplifié */}
+            <div className="p-6 space-y-6">
+              {/* Informations employé (lecture seule) */}
+              <div className="bg-blue-50 p-4 rounded-lg">
+                <h3 className="font-semibold text-blue-800 mb-2">Informations de l'employé</h3>
+                <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-semibold text-slate-700 mb-2">
-                      Nom & Prénom
-                    </label>
-                    <input
-                      type="text"
-                      value={newMission.nom_employe}
-                      onChange={(e) => handleMissionChange('nom_employe', e.target.value)}
-                      className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    />
+                    <label className="block text-sm text-gray-600">DOTI</label>
+                    <div className="font-mono bg-white px-3 py-2 rounded border">{selectedEmploye.Doti}</div>
                   </div>
                   <div>
-                    <label className="block text-sm font-semibold text-slate-700 mb-2">
-                      Doti
-                    </label>
-                    <input
-                      type="text"
-                      value={newMission.Doti}
-                      onChange={(e) => handleMissionChange('Doti', e.target.value)}
-                      className="w-full px-4 py-3 border border-slate-300 rounded-lg bg-slate-50 font-mono"
-                      readOnly
-                    />
+                    <label className="block text-sm text-gray-600">CIN</label>
+                    <div className="font-mono bg-white px-3 py-2 rounded border">{selectedEmploye.CIN}</div>
                   </div>
                   <div>
-                    <label className="block text-sm font-semibold text-slate-700 mb-2">
-                      CIN
-                    </label>
-                    <input
-                      type="text"
-                      value={newMission.CIN}
-                      onChange={(e) => handleMissionChange('CIN', e.target.value)}
-                      className="w-full px-4 py-3 border border-slate-300 rounded-lg bg-slate-50"
-                      readOnly
-                    />
+                    <label className="block text-sm text-gray-600">Grade</label>
+                    <div className="bg-white px-3 py-2 rounded border">{selectedEmploye.grade}</div>
                   </div>
                   <div>
-                    <label className="block text-sm font-semibold text-slate-700 mb-2">
-                      Grade
-                    </label>
-                    <input
-                      type="text"
-                      value={newMission.grade}
-                      onChange={(e) => handleMissionChange('grade', e.target.value)}
-                      className="w-full px-4 py-3 border border-slate-300 rounded-lg"
-                    />
-                  </div>
-                  <div className="col-span-2">
-                    <label className="block text-sm font-semibold text-slate-700 mb-2">
-                      Fonction
-                    </label>
+                    <label className="block text-sm text-gray-600">Fonction</label>
                     <input
                       type="text"
                       value={newMission.fonction}
                       onChange={(e) => handleMissionChange('fonction', e.target.value)}
-                      className="w-full px-4 py-3 border border-slate-300 rounded-lg"
-                    />
-                  </div>
-                  <div className="col-span-2">
-                    <label className="block text-sm font-semibold text-slate-700 mb-2">
-                      Lieu d'Affectation
-                    </label>
-                    <input
-                      type="text"
-                      value={newMission.lieu_affectation}
-                      onChange={(e) => handleMissionChange('lieu_affectation', e.target.value)}
-                      className="w-full px-4 py-3 border border-slate-300 rounded-lg"
+                      className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     />
                   </div>
                 </div>
               </div>
 
               {/* Détails de la mission */}
-              <div className="grid grid-cols-2 gap-6">
+              <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-semibold text-slate-700 mb-2">
-                    Destination *
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Lieu d'Affectation *
                   </label>
                   <input
                     type="text"
-                    value={newMission.destination}
-                    onChange={(e) => handleMissionChange('destination', e.target.value)}
-                    placeholder="Ex: ERRACHIDIA"
-                    className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    value={newMission.lieu_affectation}
+                    onChange={(e) => handleMissionChange('lieu_affectation', e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     required
                   />
                 </div>
+
                 <div>
-                  <label className="block text-sm font-semibold text-slate-700 mb-2">
-                    Objet de la Mission *
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Objectif de la Mission *
                   </label>
-                  <input
-                    type="text"
-                    value={newMission.objet_mission}
-                    onChange={(e) => handleMissionChange('objet_mission', e.target.value)}
-                    placeholder="Ex: Mission administrative"
-                    className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  <textarea
+                    value={newMission.objectif}
+                    onChange={(e) => handleMissionChange('objectif', e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500 h-24"
+                    placeholder="Décrivez l'objectif de la mission..."
                     required
                   />
                 </div>
-                <div className="col-span-2">
-                  <label className="block text-sm font-semibold text-slate-700 mb-2">
-                    Itinéraire
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Itinéraire *
                   </label>
                   <input
                     type="text"
                     value={newMission.itineraire}
                     onChange={(e) => handleMissionChange('itineraire', e.target.value)}
-                    placeholder="Ex: Ouarzazate - ERRACHIDIA - Ouarzazate"
-                    className="w-full px-4 py-3 border border-slate-300 rounded-lg"
-                  />
-                </div>
-              </div>
-
-              {/* Dates et heures */}
-              <div className="grid grid-cols-4 gap-6">
-                <div>
-                  <label className="block text-sm font-semibold text-slate-700 mb-2">
-                    Date Départ *
-                  </label>
-                  <input
-                    type="date"
-                    value={newMission.date_depart}
-                    onChange={(e) => handleMissionChange('date_depart', e.target.value)}
-                    className="w-full px-4 py-3 border border-slate-300 rounded-lg"
+                    className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    placeholder="Ex: Ouarzazate → Errachidia → Ouarzazate"
                     required
                   />
                 </div>
-                <div>
-                  <label className="block text-sm font-semibold text-slate-700 mb-2">
-                    Heure Départ
-                  </label>
-                  <input
-                    type="time"
-                    value={newMission.heure_depart}
-                    onChange={(e) => handleMissionChange('heure_depart', e.target.value)}
-                    className="w-full px-4 py-3 border border-slate-300 rounded-lg"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-semibold text-slate-700 mb-2">
-                    Date Retour *
-                  </label>
-                  <input
-                    type="date"
-                    value={newMission.date_retour}
-                    onChange={(e) => handleMissionChange('date_retour', e.target.value)}
-                    className="w-full px-4 py-3 border border-slate-300 rounded-lg"
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-semibold text-slate-700 mb-2">
-                    Heure Retour
-                  </label>
-                  <input
-                    type="time"
-                    value={newMission.heure_retour}
-                    onChange={(e) => handleMissionChange('heure_retour', e.target.value)}
-                    className="w-full px-4 py-3 border border-slate-300 rounded-lg"
-                  />
-                </div>
-              </div>
 
-              {/* Transport et accompagnateurs */}
-              <div className="grid grid-cols-3 gap-6">
-                <div>
-                  <label className="block text-sm font-semibold text-slate-700 mb-2">
-                    Moyen de Transport
-                  </label>
-                  <select
-                    value={newMission.moyen_transport}
-                    onChange={(e) => handleMissionChange('moyen_transport', e.target.value)}
-                    className="w-full px-4 py-3 border border-slate-300 rounded-lg"
-                  >
-                    <option value="">Sélectionner</option>
-                    <option value="voiture de service">Voiture de service</option>
-                    <option value="train">Train</option>
-                    <option value="avion">Avion</option>
-                    <option value="bus">Bus</option>
-                    <option value="véhicule personnel">Véhicule personnel</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-semibold text-slate-700 mb-2">
-                    Immatriculation
-                  </label>
-                  <input
-                    type="text"
-                    value={newMission.immatriculation}
-                    onChange={(e) => handleMissionChange('immatriculation', e.target.value)}
-                    placeholder="Ex: M 234414"
-                    className="w-full px-4 py-3 border border-slate-300 rounded-lg"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-semibold text-slate-700 mb-2">
-                    Kilométrage
-                  </label>
-                  <input
-                    type="text"
-                    value={newMission.kilometrage}
-                    onChange={(e) => handleMissionChange('kilometrage', e.target.value)}
-                    placeholder="Ex: 300 Km"
-                    className="w-full px-4 py-3 border border-slate-300 rounded-lg"
-                  />
-                </div>
-                <div className="col-span-3">
-                  <label className="block text-sm font-semibold text-slate-700 mb-2">
-                    Accompagné de
-                  </label>
-                  <textarea
-                    value={newMission.accompagnateurs}
-                    onChange={(e) => handleMissionChange('accompagnateurs', e.target.value)}
-                    placeholder="Ex: Deux élèves et un professeur"
-                    className="w-full px-4 py-3 border border-slate-300 rounded-lg h-20"
-                    rows={3}
-                  />
-                </div>
-              </div>
-
-              {/* Signature et date */}
-              <div className="border-t-2 border-blue-200 pt-6">
-                <div className="flex justify-between items-center">
+                <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-semibold text-slate-700 mb-2">
-                      Date de création
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Date de Départ *
                     </label>
                     <input
-                      type="text"
-                      value={newMission.date_creation}
-                      onChange={(e) => handleMissionChange('date_creation', e.target.value)}
-                      className="px-4 py-2 border border-slate-300 rounded-lg bg-slate-50"
-                      readOnly
+                      type="date"
+                      value={newMission.date_depart}
+                      onChange={(e) => handleDateChange('date_depart', e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      required
                     />
                   </div>
+
                   <div>
-                    <label className="block text-sm font-semibold text-slate-700 mb-2">
-                      Signataire
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Date de Retour *
                     </label>
                     <input
-                      type="text"
-                      value={newMission.signataire}
-                      onChange={(e) => handleMissionChange('signataire', e.target.value)}
-                      className="px-4 py-2 border border-slate-300 rounded-lg text-center"
+                      type="date"
+                      value={newMission.date_retour}
+                      onChange={(e) => handleDateChange('date_retour', e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      required
                     />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Moyen de Transport
+                  </label>
+                  <div className="grid grid-cols-2 gap-2">
+                    <label className={`flex items-center p-3 border rounded-lg cursor-pointer ${newMission.transport_type === 'voiture' ? 'bg-blue-50 border-blue-500' : 'border-gray-300'}`}>
+                      <input
+                        type="radio"
+                        name="transport"
+                        checked={newMission.transport_type === 'voiture'}
+                        onChange={() => handleTransportChange('voiture de service')}
+                        className="w-4 h-4 text-blue-600"
+                      />
+                      <span className="ml-2">Voiture de service</span>
+                    </label>
+                    
+                    <label className={`flex items-center p-3 border rounded-lg cursor-pointer ${newMission.transport_type === 'car' ? 'bg-blue-50 border-blue-500' : 'border-gray-300'}`}>
+                      <input
+                        type="radio"
+                        name="transport"
+                        checked={newMission.transport_type === 'car'}
+                        onChange={() => handleTransportChange('car')}
+                        className="w-4 h-4 text-blue-600"
+                      />
+                      <span className="ml-2">Car</span>
+                    </label>
                   </div>
                 </div>
               </div>
             </div>
 
             {/* Boutons d'action */}
-            <div className="p-6 border-t border-slate-200 bg-slate-50 rounded-b-2xl flex justify-between">
-              <button
-                onClick={() => window.print()}
-                className="px-6 py-3 bg-slate-600 text-white rounded-lg font-semibold hover:bg-slate-700 transition-colors flex items-center gap-2"
-              >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
-                </svg>
-                Imprimer
-              </button>
-              <div className="flex gap-3">
-                <button
-                  onClick={() => setIsMissionModalOpen(false)}
-                  className="px-6 py-3 border border-slate-300 text-slate-700 rounded-lg font-semibold hover:bg-slate-100 transition-colors"
-                >
-                  Annuler
-                </button>
-                <button
-                  onClick={handleSaveMission}
-                  className="px-6 py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-colors"
-                >
-                  Enregistrer l'Ordre
-                </button>
+            <div className="p-6 border-t border-gray-200 bg-gray-50 rounded-b-xl">
+              <div className="flex justify-between">
+                {/* Bouton Imprimer - Conditionnel selon le type de transport */}
+                {newMission.transport_type !== 'voiture' && newMission.transport_type !== 'voiture de service' && newMission.transport_type !== '' ? (
+                  <button
+                    onClick={handlePrint}
+                    className="px-6 py-3 bg-slate-600 text-white rounded-lg font-semibold hover:bg-slate-700 transition-colors flex items-center gap-2"
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+                    </svg>
+                    Imprimer
+                  </button>
+                ) : newMission.transport_type === 'voiture' || newMission.transport_type === 'voiture de service' ? (
+                  <div className="px-6 py-3 bg-amber-100 border border-amber-300 rounded-lg flex items-center gap-2">
+                    <svg className="w-5 h-5 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.998-.833-2.732 0L4.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                    </svg>
+                    <span className="text-amber-800 font-medium">Impression non disponible pour les voitures de service</span>
+                  </div>
+                ) : (
+                  <div className="px-6 py-3 bg-gray-100 border border-gray-300 rounded-lg flex items-center gap-2">
+                    <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                    <span className="text-gray-700">Sélectionnez un moyen de transport</span>
+                  </div>
+                )}
+
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => setIsMissionModalOpen(false)}
+                    className="px-6 py-3 border-2 border-gray-300 text-gray-700 rounded-lg font-semibold hover:bg-gray-100 transition-colors"
+                  >
+                    Annuler
+                  </button>
+
+                  {/* Bouton conditionnel selon le moyen de transport */}
+                  {newMission.transport_type === 'voiture' || newMission.transport_type === 'voiture de service' ? (
+                    <button
+                      onClick={handleSendToChefParc}
+                      disabled={!newMission.objectif || !newMission.itineraire || !newMission.date_depart || !newMission.date_retour}
+                      className={`px-6 py-3 rounded-lg font-semibold flex items-center gap-2 ${
+                        !newMission.objectif || !newMission.itineraire || !newMission.date_depart || !newMission.date_retour
+                          ? 'bg-purple-400 cursor-not-allowed'
+                          : 'bg-purple-600 hover:bg-purple-700'
+                      } text-white transition-colors`}
+                    >
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                      </svg>
+                      Envoyer au Chef de Parc
+                    </button>
+                  ) : newMission.transport_type && newMission.transport_type !== '' ? (
+                    <button
+                      onClick={handleSaveMission}
+                      disabled={!newMission.objectif || !newMission.itineraire || !newMission.date_depart || !newMission.date_retour}
+                      className={`px-6 py-3 rounded-lg font-semibold ${
+                        !newMission.objectif || !newMission.itineraire || !newMission.date_depart || !newMission.date_retour
+                          ? 'bg-blue-400 cursor-not-allowed'
+                          : 'bg-blue-600 hover:bg-blue-700'
+                      } text-white transition-colors`}
+                    >
+                      Enregistrer l'Ordre
+                    </button>
+                  ) : null}
+                </div>
               </div>
+
+              {/* Message d'information */}
+              {newMission.transport_type === 'voiture' && (
+                <div className="mt-4 p-3 bg-purple-50 border border-purple-200 rounded-lg flex items-start gap-2">
+                  <svg className="w-5 h-5 text-purple-600 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <div className="text-sm text-purple-800">
+                    <p className="font-semibold">Mission avec voiture de service</p>
+                    <p className="mt-1">L'ordre sera envoyé au chef de parc qui affectera un véhicule avant validation finale.</p>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>

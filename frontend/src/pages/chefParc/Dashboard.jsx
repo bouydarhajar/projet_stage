@@ -1,343 +1,574 @@
-import React, { useState } from 'react';
-import { Calendar, MapPin, User, Car, Settings, ChevronDown, Check, AlertCircle } from 'lucide-react';
+// src/App.js
+import React, { useState, useEffect } from 'react';
 
-const FleetManagement = () => {
-  const [selectedTab, setSelectedTab] = useState('pending');
-  const [selectedVehicle, setSelectedVehicle] = useState(null);
-  const [selectedDriver, setSelectedDriver] = useState('');
+const ChefParc = () => {
+  const [missions, setMissions] = useState([]);
+  const [vehicles, setVehicles] = useState([]);
+  const [selectedMission, setSelectedMission] = useState(null);
+  const [showAssignmentModal, setShowAssignmentModal] = useState(false);
+  const [showVehicleStatusModal, setShowVehicleStatusModal] = useState(false);
+  const [selectedVehicleForStatus, setSelectedVehicleForStatus] = useState(null);
 
-  const assignments = [
+  // Données initiales
+  const initialMissions = [
     {
       id: 'M-8821',
       requester: 'Ahmed Rami',
-      department: 'Rabat/Sola Oceanica',
+      department: 'Inspection Division',
       destination: 'Casablanca',
-      dates: '12 Oct - 14 Oct',
-      pax: 3,
-      priority: 'ÉLEVÉE'
+      startDate: '2024-10-12',
+      endDate: '2024-10-14',
+      passengers: 3,
+      priority: 'HIGH',
+      status: 'pending'
     },
     {
       id: 'M-8825',
       requester: 'Sarah Mansouri',
-      department: 'Ministère des Affaires',
+      department: 'Academic Affairs',
       destination: 'Rabat',
-      dates: '15 Oct - 15 Oct',
-      pax: 1,
-      priority: 'MOYENNE'
+      startDate: '2024-10-15',
+      endDate: '2024-10-15',
+      passengers: 1,
+      priority: 'MEDIUM',
+      status: 'pending'
     },
     {
       id: 'M-8830',
       requester: 'Dr. Alami',
-      department: 'Département',
-      destination: 'Tanger',
-      dates: '16 Oct - 19 Oct',
-      pax: 4,
-      priority: 'BASSE'
+      department: 'HR Department',
+      destination: 'Tangier',
+      startDate: '2024-10-16',
+      endDate: '2024-10-19',
+      passengers: 4,
+      priority: 'LOW',
+      status: 'pending'
     }
   ];
 
-  const vehicles = [
-    { id: 1, name: 'Renault Master', model: 'Fourgon 9 pl. 10456-A-1', status: 'DISPONIBLE' },
-    { id: 2, name: 'Dacia Duster', model: '5 Places - VN 36621-B-4', status: 'DISPONIBLE' },
-    { id: 3, name: 'Peugeot 308', model: 'Maintenance programmée', status: 'EN ATELIER' }
+  const initialVehicles = [
+    { id: 1, brand: 'Renault', model: 'Master', plate: '12456-A-1', seats: 7, status: 'available', currentMileage: 15200 },
+    { id: 2, brand: 'Peugeot', model: '308', plate: '12345-B-2', seats: 5, status: 'maintenance', currentMileage: 45000 },
+    { id: 3, brand: 'Toyota', model: 'Hilux', plate: 'B-122', seats: 5, status: 'available', currentMileage: 78000 },
+    { id: 4, brand: 'VW', model: 'Caddy', plate: 'C-45', seats: 7, status: 'available', currentMileage: 32000 }
   ];
 
-  const fleetTimeline = [
-    { vehicle: 'Toyota Hiace (B-1234)', days: ['LUN 12', 'MAR 13', 'MER 14'], status: 'assigned' },
-    { vehicle: 'VW Caddy (C-4567)', days: ['MER 14', 'JEU 15', 'VEN 16'], status: 'assigned' }
-  ];
+  useEffect(() => {
+    setMissions(initialMissions);
+    setVehicles(initialVehicles);
+  }, []);
 
-  const getPriorityColor = (priority) => {
-    switch (priority) {
-      case 'ÉLEVÉE': return 'bg-red-100 text-red-700 border-red-200';
-      case 'MOYENNE': return 'bg-amber-100 text-amber-700 border-amber-200';
-      case 'BASSE': return 'bg-blue-100 text-blue-700 border-blue-200';
-      default: return 'bg-gray-100 text-gray-700 border-gray-200';
-    }
+  const handleAssignMission = (mission) => {
+    setSelectedMission(mission);
+    setShowAssignmentModal(true);
+  };
+
+  const handleConfirmAssignment = (assignmentData) => {
+    const updatedMissions = missions.map(mission => {
+      if (mission.id === assignmentData.missionId) {
+        return { 
+          ...mission, 
+          status: 'validated', 
+          assignedVehicleId: assignmentData.vehicleId,
+          startMileage: assignmentData.startMileage
+        };
+      }
+      return mission;
+    });
+
+    const updatedVehicles = vehicles.map(vehicle => {
+      if (vehicle.id === assignmentData.vehicleId) {
+        return { 
+          ...vehicle, 
+          status: 'on_mission',
+          currentMileage: assignmentData.startMileage
+        };
+      }
+      return vehicle;
+    });
+
+    const mission = missions.find(m => m.id === assignmentData.missionId);
+    const vehicle = vehicles.find(v => v.id === assignmentData.vehicleId);
+    
+    alert(`Mission ${mission.id} validée !\nVéhicule: ${vehicle.brand} ${vehicle.model} (${vehicle.plate})\nNotification envoyée au demandeur.`);
+
+    setMissions(updatedMissions);
+    setVehicles(updatedVehicles);
+    setShowAssignmentModal(false);
+    setSelectedMission(null);
+  };
+
+  const handleUpdateVehicleStatus = (vehicle, newStatus) => {
+    const updatedVehicles = vehicles.map(v => {
+      if (v.id === vehicle.id) {
+        return { ...v, status: newStatus };
+      }
+      return v;
+    });
+    
+    setVehicles(updatedVehicles);
+    setShowVehicleStatusModal(false);
+    setSelectedVehicleForStatus(null);
+    
+    alert(`Statut du véhicule ${vehicle.plate} mis à jour: ${getStatusText(newStatus)}`);
+  };
+
+  const handleOpenStatusModal = (vehicle) => {
+    setSelectedVehicleForStatus(vehicle);
+    setShowVehicleStatusModal(true);
+  };
+
+  const getAvailableVehicles = () => {
+    return vehicles.filter(vehicle => vehicle.status === 'available');
   };
 
   const getStatusColor = (status) => {
-    switch (status) {
-      case 'DISPONIBLE': return 'bg-emerald-100 text-emerald-700 border-emerald-300';
-      case 'EN ATELIER': return 'bg-rose-100 text-rose-700 border-rose-300';
-      default: return 'bg-gray-100 text-gray-700 border-gray-300';
+    switch(status) {
+      case 'available': return 'bg-green-500';
+      case 'on_mission': return 'bg-yellow-500';
+      case 'maintenance': return 'bg-red-500';
+      default: return 'bg-gray-500';
     }
   };
 
+  const getStatusText = (status) => {
+    switch(status) {
+      case 'available': return 'DISPONIBLE';
+      case 'on_mission': return 'EN MISSION';
+      case 'maintenance': return 'EN MAINTENANCE';
+      default: return status.toUpperCase();
+    }
+  };
+
+  const getPriorityColor = (priority) => {
+    switch(priority) {
+      case 'HIGH': return 'bg-red-500';
+      case 'MEDIUM': return 'bg-yellow-500';
+      case 'LOW': return 'bg-green-500';
+      default: return 'bg-gray-500';
+    }
+  };
+
+  const pendingMissions = missions.filter(mission => mission.status === 'pending');
+  const activeMissions = missions.filter(mission => mission.status === 'validated');
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
+    <div className="min-h-screen bg-gray-50">
       {/* Header */}
-      <header className="bg-white border-b border-slate-200 shadow-sm">
-        <div className="max-w-[1600px] mx-auto px-6 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <div className="bg-blue-600 p-2.5 rounded-xl shadow-lg shadow-blue-600/30">
-                <Car className="w-6 h-6 text-white" />
-              </div>
-              <div>
-                <h1 className="text-2xl font-bold bg-gradient-to-r from-slate-800 to-slate-600 bg-clip-text text-transparent">
-                  Direction Provinciale de l'Éducation
-                </h1>
-                <p className="text-sm text-slate-500 mt-0.5">GESTION DE FLOTTE - Tableau de bord Chef de Parc</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-4">
-              <nav className="flex gap-1 bg-slate-100 rounded-xl p-1">
-                {['Missions', 'Flotte', 'Chauffeurs', 'Planning'].map((item) => (
-                  <button
-                    key={item}
-                    className="px-4 py-2 rounded-lg text-sm font-medium transition-all hover:bg-white hover:shadow-sm text-slate-600 hover:text-slate-900"
-                  >
-                    {item}
-                  </button>
-                ))}
-              </nav>
-              <button className="p-2 hover:bg-slate-100 rounded-lg transition-colors">
-                <Settings className="w-5 h-5 text-slate-600" />
-              </button>
-            </div>
-          </div>
+      <header className="bg-gradient-to-r from-blue-900 to-blue-800 text-white shadow-lg">
+        <div className="container mx-auto px-4 py-6">
+          <h1 className="text-2xl font-bold mb-1">Direction Provinciale de l'Éducation</h1>
+          <h2 className="text-lg font-medium text-blue-100">GESTION DU PARC AUTOMOBILE</h2>
         </div>
       </header>
 
-      <div className="max-w-[1600px] mx-auto px-6 py-8">
-        <div className="grid grid-cols-3 gap-8">
-          {/* Left Column - Assignments */}
-          <div className="col-span-2 space-y-6">
-            <div className="bg-white rounded-2xl shadow-xl border border-slate-200 overflow-hidden">
-              <div className="p-6 border-b border-slate-100">
-                <div className="flex items-center justify-between mb-6">
-                  <h2 className="text-2xl font-bold text-slate-800">Affectation Véhicule & Chauffeur</h2>
-                  <button className="bg-blue-600 text-white px-5 py-2.5 rounded-xl font-medium hover:bg-blue-700 transition-all shadow-lg shadow-blue-600/30 hover:shadow-blue-600/50">
-                    Imprimer Ordre Groupé
-                  </button>
-                </div>
+      {/* Main Content */}
+      <main className="container mx-auto px-4 py-6 space-y-6">
+        {/* Stats Section */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+          <div className="bg-white rounded-xl shadow p-6">
+            <div className="text-gray-500 text-sm font-medium mb-2">Missions en attente</div>
+            <div className="text-3xl font-bold text-blue-900">{pendingMissions.length}</div>
+          </div>
+          <div className="bg-white rounded-xl shadow p-6">
+            <div className="text-gray-500 text-sm font-medium mb-2">Missions en cours</div>
+            <div className="text-3xl font-bold text-green-600">{activeMissions.length}</div>
+          </div>
+          <div className="bg-white rounded-xl shadow p-6">
+            <div className="text-gray-500 text-sm font-medium mb-2">Véhicules disponibles</div>
+            <div className="text-3xl font-bold text-blue-600">{getAvailableVehicles().length}</div>
+          </div>
+        </div>
 
-                {/* Tabs */}
-                <div className="flex gap-2 border-b border-slate-200">
-                  {[
-                    { id: 'pending', label: 'Affectations en Attente', count: 15 },
-                    { id: 'scheduled', label: 'Planifiées' },
-                    { id: 'progress', label: 'En Cours' }
-                  ].map((tab) => (
-                    <button
-                      key={tab.id}
-                      onClick={() => setSelectedTab(tab.id)}
-                      className={`px-4 py-3 font-medium text-sm transition-all relative ${
-                        selectedTab === tab.id
-                          ? 'text-blue-600'
-                          : 'text-slate-500 hover:text-slate-700'
-                      }`}
-                    >
-                      {tab.label}
-                      {tab.count && (
-                        <span className="ml-2 bg-blue-100 text-blue-600 px-2 py-0.5 rounded-full text-xs font-semibold">
-                          {tab.count}
-                        </span>
-                      )}
-                      {selectedTab === tab.id && (
-                        <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600 rounded-full" />
-                      )}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Assignments List */}
-              <div className="divide-y divide-slate-100">
-                {assignments.map((assignment) => (
-                  <div
-                    key={assignment.id}
-                    className="p-6 hover:bg-slate-50 transition-colors cursor-pointer group"
-                    onClick={() => setSelectedVehicle(assignment.id)}
-                  >
-                    <div className="flex items-start gap-4">
-                      <div className="bg-blue-600 text-white px-3 py-2 rounded-lg font-bold text-sm shadow-md min-w-[80px] text-center">
-                        {assignment.id}
-                      </div>
-                      <div className="flex-1">
-                        <div className="flex items-start justify-between mb-3">
-                          <div>
-                            <h3 className="font-bold text-slate-800 text-lg group-hover:text-blue-600 transition-colors">
-                              {assignment.requester}
-                            </h3>
-                            <p className="text-sm text-slate-500 mt-0.5">{assignment.department}</p>
-                          </div>
-                          <span className={`px-3 py-1 rounded-lg text-xs font-bold border ${getPriorityColor(assignment.priority)}`}>
-                            {assignment.priority}
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-6 text-sm text-slate-600">
-                          <div className="flex items-center gap-2">
-                            <MapPin className="w-4 h-4 text-slate-400" />
-                            <span className="font-medium">{assignment.destination}</span>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <Calendar className="w-4 h-4 text-slate-400" />
-                            <span>{assignment.dates}</span>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <User className="w-4 h-4 text-slate-400" />
-                            <span>{assignment.pax} PAX</span>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Fleet Timeline */}
-            <div className="bg-white rounded-2xl shadow-xl border border-slate-200 p-6">
-              <div className="flex items-center justify-between mb-6">
-                <h3 className="text-xl font-bold text-slate-800">Calendrier de Disponibilité de la Flotte</h3>
-                <div className="flex items-center gap-4 text-sm">
-                  <div className="flex items-center gap-2">
-                    <div className="w-3 h-3 rounded-full bg-blue-500"></div>
-                    <span className="text-slate-600">Affecté</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className="w-3 h-3 rounded-full bg-slate-200"></div>
-                    <span className="text-slate-600">Disponible</span>
-                  </div>
-                </div>
-              </div>
-
-              <div className="space-y-4">
-                <div className="grid grid-cols-8 gap-2 text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
-                  <div className="col-span-2"></div>
-                  {['Lun 12', 'Mar 13', 'Mer 14', 'Jeu 15', 'Ven 16', 'Sam 17'].map((day) => (
-                    <div key={day} className="text-center">{day}</div>
-                  ))}
-                </div>
-
-                {fleetTimeline.map((item, idx) => (
-                  <div key={idx} className="grid grid-cols-8 gap-2 items-center">
-                    <div className="col-span-2 text-sm font-medium text-slate-700">{item.vehicle}</div>
-                    {['LUN 12', 'MAR 13', 'MER 14', 'JEU 15', 'VEN 16', 'SAM 17'].map((day) => (
-                      <div
-                        key={day}
-                        className={`h-10 rounded-lg transition-all ${
-                          item.days.includes(day)
-                            ? 'bg-blue-500 shadow-md'
-                            : 'bg-slate-100 hover:bg-slate-200'
-                        }`}
-                      />
-                    ))}
-                  </div>
-                ))}
-              </div>
-
-              <div className="mt-6 pt-6 border-t border-slate-200">
-                <div className="flex items-center gap-4">
-                  <div className="text-sm text-slate-500">Stats Hebdomadaires</div>
-                  <div className="flex-1 bg-slate-100 rounded-full h-3 overflow-hidden">
-                    <div className="bg-gradient-to-r from-blue-500 to-blue-600 h-full rounded-full" style={{ width: '82%' }}></div>
-                  </div>
-                  <div className="text-2xl font-bold text-slate-800">82%</div>
-                  <div className="text-sm text-slate-500">Utilisation</div>
-                </div>
-              </div>
+        {/* Missions Section */}
+        <section className="bg-white rounded-xl shadow overflow-hidden">
+          <div className="px-6 py-4 border-b border-gray-200">
+            <div className="flex justify-between items-center">
+              <h2 className="text-xl font-bold text-gray-800">Ordres de Mission en Attente</h2>
+              <button 
+                className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg text-sm font-medium transition-colors"
+                onClick={() => alert('Liste actualisée')}
+              >
+                Actualiser
+              </button>
             </div>
           </div>
-
-          {/* Right Column - Active Assignment */}
-          <div className="space-y-6">
-            <div className="bg-gradient-to-br from-blue-600 to-indigo-600 rounded-2xl shadow-2xl p-6 text-white">
-              <div className="flex items-center justify-between mb-6">
-                <h3 className="text-lg font-bold opacity-90">AFFECTATION ACTIVE</h3>
-                <button className="p-1 hover:bg-white/20 rounded-lg transition-colors">
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                </button>
-              </div>
-
-              <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 mb-6 border border-white/20">
-                <div className="text-sm opacity-75 mb-1">Mission M-8821</div>
-                <div className="text-xl font-bold">Rabat/Sola Oceanica</div>
-                <div className="text-sm mt-2 opacity-90">12 Oct, 14 Oct (3 Jours)</div>
-              </div>
-
-              <div className="space-y-4">
-                {/* Select Vehicle */}
-                <div>
-                  <label className="block text-sm font-medium mb-3 opacity-90">Sélectionner un Véhicule</label>
-                  <div className="space-y-2">
-                    {vehicles.map((vehicle) => (
-                      <button
-                        key={vehicle.id}
-                        onClick={() => setSelectedVehicle(vehicle.id)}
-                        disabled={vehicle.status === 'EN ATELIER'}
-                        className={`w-full p-4 rounded-xl border-2 transition-all text-left ${
-                          selectedVehicle === vehicle.id
-                            ? 'bg-white text-slate-800 border-white shadow-lg'
-                            : vehicle.status === 'EN ATELIER'
-                            ? 'bg-white/5 border-white/10 opacity-40 cursor-not-allowed'
-                            : 'bg-white/10 border-white/20 hover:bg-white/20 hover:border-white/30'
-                        }`}
+          
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    N° Mission
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Demandeur & Service
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Destination
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Dates
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    PAX
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Priorité
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Action
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {pendingMissions.map(mission => (
+                  <tr key={mission.id} className="hover:bg-gray-50 transition-colors">
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className="font-bold text-blue-900">{mission.id}</span>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div>
+                        <div className="font-medium text-gray-900">{mission.requester}</div>
+                        <div className="text-sm text-gray-500">{mission.department}</div>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-gray-900">
+                      {mission.destination}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-gray-900">{mission.startDate}</div>
+                      <div className="text-sm text-gray-500">au {mission.endDate}</div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-center">
+                      <span className="inline-flex items-center justify-center w-8 h-8 bg-blue-100 text-blue-800 font-bold rounded-full">
+                        {mission.passengers}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className={`px-3 py-1 rounded-full text-xs font-bold text-white ${getPriorityColor(mission.priority)}`}>
+                        {mission.priority}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <button 
+                        onClick={() => handleAssignMission(mission)}
+                        className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg text-sm transition-colors"
                       >
-                        <div className="flex items-center justify-between">
-                          <div className="flex-1">
-                            <div className="font-bold text-base">{vehicle.name}</div>
-                            <div className={`text-xs mt-1 ${selectedVehicle === vehicle.id ? 'text-slate-500' : 'opacity-75'}`}>
-                              {vehicle.model}
-                            </div>
-                          </div>
-                          <span className={`px-3 py-1 rounded-lg text-xs font-bold border ${
-                            selectedVehicle === vehicle.id
-                              ? getStatusColor(vehicle.status)
-                              : 'border-white/40 bg-white/20'
-                          }`}>
-                            {vehicle.status}
+                        Attribuer véhicule
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        {/* Vehicles Section */}
+        <section className="bg-white rounded-xl shadow overflow-hidden">
+          <div className="px-6 py-4 border-b border-gray-200">
+            <h2 className="text-xl font-bold text-gray-800">Parc Véhicules</h2>
+          </div>
+          
+          <div className="p-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              {vehicles.map(vehicle => (
+                <div key={vehicle.id} className="border border-gray-200 rounded-lg overflow-hidden hover:shadow-lg transition-shadow">
+                  <div className="p-4">
+                    <div className="flex justify-between items-start mb-3">
+                      <div>
+                        <h3 className="font-bold text-lg text-gray-800">{vehicle.brand} {vehicle.model}</h3>
+                        <p className="text-gray-600 text-sm">{vehicle.plate}</p>
+                      </div>
+                      <button 
+                        onClick={() => handleOpenStatusModal(vehicle)}
+                        className="px-3 py-1 border border-blue-600 text-blue-600 text-sm rounded hover:bg-blue-50 transition-colors"
+                      >
+                        Modifier statut
+                      </button>
+                    </div>
+                    
+                    <div className="space-y-2 mb-4">
+                      <div className="flex justify-between">
+                        <span className="text-gray-500 text-sm">Places:</span>
+                        <span className="font-medium">{vehicle.seats}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-500 text-sm">Kilométrage:</span>
+                        <span className="font-medium">{vehicle.currentMileage.toLocaleString()} km</span>
+                      </div>
+                    </div>
+                    
+                    <div className={`mt-4 py-2 text-center text-white font-medium text-sm ${getStatusColor(vehicle.status)}`}>
+                      {getStatusText(vehicle.status)}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* Active Missions Section */}
+        {activeMissions.length > 0 && (
+          <section className="bg-white rounded-xl shadow overflow-hidden">
+            <div className="px-6 py-4 border-b border-gray-200">
+              <h2 className="text-xl font-bold text-gray-800">Missions en Cours</h2>
+            </div>
+            
+            <div className="p-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {activeMissions.map(mission => {
+                  const assignedVehicle = vehicles.find(v => v.id === mission.assignedVehicleId);
+                  return (
+                    <div key={mission.id} className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow border-l-4 border-l-green-500">
+                      <div className="flex justify-between items-start mb-3">
+                        <h3 className="font-bold text-lg text-gray-800">Mission {mission.id}</h3>
+                        <span className="px-3 py-1 bg-green-100 text-green-800 text-xs font-bold rounded-full">
+                          EN COURS
+                        </span>
+                      </div>
+                      
+                      <div className="space-y-2">
+                        <div className="flex">
+                          <span className="text-gray-500 text-sm w-24">Destination:</span>
+                          <span className="font-medium">{mission.destination}</span>
+                        </div>
+                        <div className="flex">
+                          <span className="text-gray-500 text-sm w-24">Dates:</span>
+                          <span className="font-medium">{mission.startDate} - {mission.endDate}</span>
+                        </div>
+                        <div className="flex">
+                          <span className="text-gray-500 text-sm w-24">Véhicule:</span>
+                          <span className="font-medium">
+                            {assignedVehicle ? `${assignedVehicle.brand} ${assignedVehicle.model}` : 'Non attribué'}
                           </span>
                         </div>
-                      </button>
-                    ))}
+                        {mission.startMileage && (
+                          <div className="flex">
+                            <span className="text-gray-500 text-sm w-24">Km départ:</span>
+                            <span className="font-medium">{mission.startMileage.toLocaleString()} km</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </section>
+        )}
+      </main>
+
+      {/* Assignment Modal */}
+      {showAssignmentModal && selectedMission && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden">
+            {/* Header */}
+            <div className="bg-gradient-to-r from-blue-900 to-blue-800 text-white p-6">
+              <div className="flex justify-between items-center">
+                <h2 className="text-xl font-bold">Attribuer un véhicule - Mission {selectedMission.id}</h2>
+                <button 
+                  onClick={() => {
+                    setShowAssignmentModal(false);
+                    setSelectedMission(null);
+                  }}
+                  className="text-2xl hover:text-gray-200 transition-colors"
+                >
+                  ×
+                </button>
+              </div>
+            </div>
+
+            {/* Body */}
+            <div className="p-6 overflow-y-auto max-h-[calc(90vh-80px)]">
+              {/* Mission Summary */}
+              <div className="mb-8 p-4 bg-blue-50 rounded-lg">
+                <h3 className="font-bold text-lg text-gray-800 mb-3">Détails de la mission</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <div className="text-sm text-gray-500">Demandeur</div>
+                    <div className="font-medium">{selectedMission.requester}</div>
+                  </div>
+                  <div>
+                    <div className="text-sm text-gray-500">Service</div>
+                    <div className="font-medium">{selectedMission.department}</div>
+                  </div>
+                  <div>
+                    <div className="text-sm text-gray-500">Destination</div>
+                    <div className="font-medium">{selectedMission.destination}</div>
+                  </div>
+                  <div>
+                    <div className="text-sm text-gray-500">Passagers</div>
+                    <div className="font-medium">{selectedMission.passengers}</div>
+                  </div>
+                  <div className="md:col-span-2">
+                    <div className="text-sm text-gray-500">Dates</div>
+                    <div className="font-medium">{selectedMission.startDate} - {selectedMission.endDate}</div>
                   </div>
                 </div>
+              </div>
 
-                {/* Assign Driver */}
-                <div>
-                  <label className="block text-sm font-medium mb-3 opacity-90">Affecter un Chauffeur</label>
-                  <div className="relative">
-                    <select
-                      value={selectedDriver}
-                      onChange={(e) => setSelectedDriver(e.target.value)}
-                      className="w-full p-4 pr-10 rounded-xl bg-white/10 border-2 border-white/20 text-white appearance-none cursor-pointer hover:bg-white/20 transition-all focus:outline-none focus:ring-2 focus:ring-white/50"
-                    >
-                      <option value="" className="text-slate-800">Mustapha Eskimi (Disponible)</option>
-                      <option value="driver2" className="text-slate-800">Hassan Alami (Disponible)</option>
-                      <option value="driver3" className="text-slate-800">Fatima Zahra (En Mission)</option>
-                    </select>
-                    <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 pointer-events-none" />
-                  </div>
-                  <div className="mt-3 p-3 bg-blue-500/30 rounded-lg border border-blue-400/30 flex items-start gap-2">
-                    <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
-                    <p className="text-xs leading-relaxed">
-                      Le chauffeur Mustapha est certifié pour les véhicules lourds de transport de passagers (Permis B)
-                    </p>
-                  </div>
+              {/* Vehicle Selection */}
+              <h3 className="font-bold text-lg text-gray-800 mb-4">Sélectionner un véhicule</h3>
+              
+              {getAvailableVehicles().length === 0 ? (
+                <div className="text-center py-8 bg-yellow-50 rounded-lg">
+                  <p className="text-yellow-700 font-medium">Aucun véhicule disponible</p>
+                  <p className="text-yellow-600 text-sm mt-1">Veuillez modifier le statut d'un véhicule en "Disponible"</p>
                 </div>
-
-                {/* Conflicts */}
-                <div className="p-4 bg-emerald-500/20 rounded-xl border border-emerald-400/30 flex items-center gap-2">
-                  <Check className="w-5 h-5 text-emerald-300" />
-                  <span className="text-sm font-medium">Aucun conflit de planning détecté</span>
+              ) : (
+                <div className="space-y-4">
+                  {getAvailableVehicles().map(vehicle => (
+                    <VehicleOption 
+                      key={vehicle.id}
+                      vehicle={vehicle}
+                      mission={selectedMission}
+                      onConfirm={handleConfirmAssignment}
+                    />
+                  ))}
                 </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
-                {/* Confirm Button */}
-                <button className="w-full bg-white text-blue-600 py-4 rounded-xl font-bold text-base shadow-2xl hover:shadow-3xl hover:scale-[1.02] transition-all">
-                  Confirmer & Dispatcher
+      {/* Vehicle Status Modal */}
+      {showVehicleStatusModal && selectedVehicleForStatus && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-xl shadow-2xl max-w-md w-full">
+            {/* Header */}
+            <div className="bg-gradient-to-r from-blue-900 to-blue-800 text-white p-6 rounded-t-xl">
+              <div className="flex justify-between items-center">
+                <h2 className="text-xl font-bold">Changer le statut</h2>
+                <button 
+                  onClick={() => {
+                    setShowVehicleStatusModal(false);
+                    setSelectedVehicleForStatus(null);
+                  }}
+                  className="text-2xl hover:text-gray-200 transition-colors"
+                >
+                  ×
+                </button>
+              </div>
+              <p className="text-blue-100 mt-1">{selectedVehicleForStatus.brand} {selectedVehicleForStatus.model} - {selectedVehicleForStatus.plate}</p>
+            </div>
+
+            {/* Body */}
+            <div className="p-6">
+              <div className="mb-6 p-4 bg-gray-50 rounded-lg text-center">
+                <p className="text-gray-600 text-sm">Statut actuel</p>
+                <p className={`mt-1 font-bold text-lg ${getStatusColor(selectedVehicleForStatus.status).replace('bg-', 'text-')}`}>
+                  {getStatusText(selectedVehicleForStatus.status)}
+                </p>
+              </div>
+
+              <h3 className="font-bold text-gray-800 mb-4">Sélectionner le nouveau statut:</h3>
+              
+              <div className="space-y-3">
+                <button 
+                  onClick={() => handleUpdateVehicleStatus(selectedVehicleForStatus, 'available')}
+                  className="w-full p-4 border-2 border-green-200 hover:border-green-500 hover:bg-green-50 rounded-lg flex items-center space-x-3 transition-all group"
+                >
+                  <div className="w-4 h-4 rounded-full bg-green-500 group-hover:scale-125 transition-transform"></div>
+                  <div className="text-left">
+                    <div className="font-bold text-gray-800">Disponible</div>
+                    <div className="text-sm text-gray-600">Véhicule prêt pour une mission</div>
+                  </div>
+                </button>
+
+                <button 
+                  onClick={() => handleUpdateVehicleStatus(selectedVehicleForStatus, 'on_mission')}
+                  className="w-full p-4 border-2 border-yellow-200 hover:border-yellow-500 hover:bg-yellow-50 rounded-lg flex items-center space-x-3 transition-all group"
+                >
+                  <div className="w-4 h-4 rounded-full bg-yellow-500 group-hover:scale-125 transition-transform"></div>
+                  <div className="text-left">
+                    <div className="font-bold text-gray-800">En mission</div>
+                    <div className="text-sm text-gray-600">Véhicule actuellement en mission</div>
+                  </div>
+                </button>
+
+                <button 
+                  onClick={() => handleUpdateVehicleStatus(selectedVehicleForStatus, 'maintenance')}
+                  className="w-full p-4 border-2 border-red-200 hover:border-red-500 hover:bg-red-50 rounded-lg flex items-center space-x-3 transition-all group"
+                >
+                  <div className="w-4 h-4 rounded-full bg-red-500 group-hover:scale-125 transition-transform"></div>
+                  <div className="text-left">
+                    <div className="font-bold text-gray-800">En maintenance</div>
+                    <div className="text-sm text-gray-600">Véhicule en réparation/entretien</div>
+                  </div>
                 </button>
               </div>
             </div>
           </div>
         </div>
+      )}
+    </div>
+  );
+};
+
+// Vehicle Option Component
+const VehicleOption = ({ vehicle, mission, onConfirm }) => {
+  const [startMileage, setStartMileage] = useState(vehicle.currentMileage.toString());
+
+  const handleAssign = () => {
+    if (!startMileage || isNaN(startMileage) || parseInt(startMileage) < vehicle.currentMileage) {
+      alert(`Veuillez saisir un kilométrage valide (minimum: ${vehicle.currentMileage} km)`);
+      return;
+    }
+
+    onConfirm({
+      missionId: mission.id,
+      vehicleId: vehicle.id,
+      startMileage: parseInt(startMileage)
+    });
+  };
+
+  return (
+    <div className="border border-gray-300 rounded-lg p-4 hover:border-blue-500 hover:bg-blue-50 transition-all">
+      <div className="flex flex-col md:flex-row md:items-center justify-between mb-4">
+        <div>
+          <h4 className="font-bold text-lg text-gray-800">{vehicle.brand} {vehicle.model}</h4>
+          <p className="text-gray-600">{vehicle.plate} • {vehicle.seats} places</p>
+          <p className="text-sm text-gray-500 mt-1">Kilométrage actuel: {vehicle.currentMileage.toLocaleString()} km</p>
+        </div>
+        <span className="mt-2 md:mt-0 px-3 py-1 bg-green-100 text-green-800 text-sm font-medium rounded-full">
+          DISPONIBLE
+        </span>
+      </div>
+
+      <div className="space-y-4">
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Kilométrage de départ
+          </label>
+          <div className="flex items-center space-x-2">
+            <input
+              type="number"
+              value={startMileage}
+              onChange={(e) => setStartMileage(e.target.value)}
+              min={vehicle.currentMileage}
+              className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              placeholder="Saisir le kilométrage"
+            />
+            <span className="text-gray-500 font-medium w-10">km</span>
+          </div>
+          <p className="text-xs text-gray-500 mt-1">
+            Minimum: {vehicle.currentMileage.toLocaleString()} km
+          </p>
+        </div>
+
+        <button 
+          onClick={handleAssign}
+          className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors"
+        >
+          Attribuer ce véhicule à la mission
+        </button>
       </div>
     </div>
   );
 };
 
-export default FleetManagement;
+export default ChefParc;

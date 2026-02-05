@@ -8,12 +8,16 @@ use Illuminate\Http\Request;
 
 class MissionController extends Controller
 {
+     public function __construct()
+    {
+        // $this->midd('auth:sanctum');
+    }
      // chef de service : liste de toutes les missions
     public function index()
     {
         return Mission::with(['employee','vehicle'])->get();
     }
-    // chef de service crée une mission
+   // chef de service crée une mission
     public function store(Request $request)
     {
         $request->validate([
@@ -22,17 +26,19 @@ class MissionController extends Controller
             'lieu_affectation' => 'required|string',
             'objectif' => 'required|string',
             'itineraire' => 'required|string',
+            'transport_type' => 'nullable|in:car,voiture',
             'date_depart' => 'required|date',
             'date_retour' => 'required|date|after_or_equal:date_depart',
         ]);
 
         $mission = Mission::create([
             'doti_id' => $request->doti_id,
-            'chef_service_id' => $request->user()->id,
+            'chef_service_id' => 1, // ID fixe pour le test, à remplacer par $request->user()->id plus tard
             'fonction' => $request->fonction,
             'lieu_affectation' => $request->lieu_affectation,
             'objectif' => $request->objectif,
             'itineraire' => $request->itineraire,
+            'transport_type' => $request->transport_type,
             'date_depart' => $request->date_depart,
             'date_retour' => $request->date_retour,
             'statut' => 'en_attente'
@@ -40,6 +46,7 @@ class MissionController extends Controller
 
         return response()->json($mission, 201);
     }
+    
      // la méthode de delete un mission 
     public function destroy($id)
     {
@@ -68,6 +75,7 @@ class MissionController extends Controller
             'lieu_affectation' => 'sometimes|string',
             'objectif' => 'sometimes|string',
             'itineraire' => 'sometimes|string',
+            'transport_type' => 'sometimes|in:car,voiture',
             'date_depart' => 'sometimes|date',
             'date_retour' => 'sometimes|date|after_or_equal:date_depart',
             'statut' => 'sometimes|in:en_attente,en_cours,terminee,annulee',
