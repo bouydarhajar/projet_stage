@@ -33,12 +33,11 @@ RUN chown -R www-data:www-data /var/www/storage /var/www/bootstrap/cache
 EXPOSE 9000
 
 CMD ["php-fpm"]
-```
+
 
 ---
 
 ### 3. **backend/.dockerignore**
-```
 vendor/
 node_modules/
 .env
