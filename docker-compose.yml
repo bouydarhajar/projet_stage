@@ -62,7 +62,7 @@ services:
     volumes:
       - dbdata:/var/lib/mysql
     ports:
-      - "3306:3306"
+      - "3307:3306"
     networks:
       - app-network
 
@@ -73,38 +73,3 @@ networks:
 volumes:
   dbdata:
     driver: local
-```
-
-4. Sauvegardez
-
----
-
-## ÉTAPE 7 : Créer le .gitignore
-
-### 7.1 À la racine
-
-1. À la racine, créez `.gitignore`
-2. Collez :
-```
-# Backend
-backend/vendor/
-backend/node_modules/
-backend/.env
-backend/storage/logs/*.log
-backend/storage/framework/cache/*
-backend/storage/framework/sessions/*
-backend/storage/framework/views/*
-backend/.phpunit.result.cache
-
-# Frontend
-frontend/node_modules/
-frontend/build/
-frontend/.env
-frontend/.env.local
-
-# Docker volumes
-docker/mysql/
-
-# OS
-.DS_Store
-Thumbs.db
