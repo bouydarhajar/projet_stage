@@ -7,8 +7,12 @@ use Illuminate\Database\Eloquent\Model;
 class Vehicle extends Model
 {
    protected $fillable = [
-        'matricule',
-        'type'
+        'brand',
+        'model',
+        'plate',
+        'seats',
+        'status',
+        'current_mileage',
     ];
     
 

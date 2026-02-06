@@ -1,7 +1,7 @@
 // src/components/Missions.jsx
 import React, { useEffect, useState } from "react";
 import api from '../../api/axios';
-import { Edit2, Trash2, RefreshCw, Download, Truck, X, Save, Calendar, Clock, MapPin, User, Car, Users } from "lucide-react";
+import { Edit2, Trash2, RefreshCw, Download, Truck, X, Save, Calendar, Clock, MapPin, User, Car, Users, Printer, Search, Filter } from "lucide-react";
 
 function Missions() {
   const [missions, setMissions] = useState([]);
@@ -47,7 +47,6 @@ function Missions() {
       
       console.log("Réponse API employés:", res.data);
       
-      // Les données sont directement dans res.data (tableau d'employés)
       const employeesData = Array.isArray(res.data) ? res.data : [];
       setEmployees(employeesData);
       
@@ -64,7 +63,6 @@ function Missions() {
       
       console.log("Chargement des missions depuis l'API...");
       
-      // Récupérer le token d'authentification
       const token = localStorage.getItem("token");
       
       if (!token) {
@@ -82,7 +80,6 @@ function Missions() {
       
       console.log("Réponse API missions:", res.data);
       
-      // Les données sont directement dans res.data (tableau de missions)
       const missionsData = Array.isArray(res.data) ? res.data : [];
       setMissions(missionsData);
       
@@ -107,7 +104,6 @@ function Missions() {
   const findEmployeeByDoti = (doti) => {
     if (!doti) return null;
     
-    // Chercher l'employé avec différents formats de clés
     return employees.find(emp => 
       emp.Doti === doti || 
       emp.doti === doti ||
@@ -119,10 +115,8 @@ function Missions() {
   const getDoti = (mission) => {
     if (!mission) return "Non défini";
     
-    // Récupérer la valeur
     let doti = "";
     
-    // Essayer toutes les clés possibles
     const possibleKeys = [
       mission.employee?.Doti,
       mission.employee?.doti,
@@ -133,7 +127,7 @@ function Missions() {
     
     for (const key of possibleKeys) {
       if (key !== undefined && key !== null && key !== "") {
-        doti = String(key); // Convertir explicitement en string
+        doti = String(key);
         break;
       }
     }
@@ -147,14 +141,26 @@ function Missions() {
     const employee = findEmployeeByDoti(doti);
     
     if (employee) {
-      // Chercher le nom dans différents formats
       if (employee.nom) return String(employee.nom);
     }
     
-    // Vérifier dans l'objet mission
     if (mission.employee?.nom) return String(mission.employee.nom);
     
     return "Non défini";
+  };
+
+  // Fonction utilitaire pour extraire le prénom d'une mission
+  const getPrenom = (mission) => {
+    const doti = getDoti(mission);
+    const employee = findEmployeeByDoti(doti);
+    
+    if (employee) {
+      if (employee.prenom) return String(employee.prenom);
+    }
+    
+    if (mission.employee?.prenom) return String(mission.employee.prenom);
+    
+    return "";
   };
 
   // Fonction utilitaire pour extraire le CIN d'une mission
@@ -166,7 +172,6 @@ function Missions() {
       if (employee.CIN) return String(employee.CIN);
     }
     
-    // Vérifier dans l'objet mission
     if (mission.employee?.CIN) return String(mission.employee.CIN);
     return "Non défini";
   };
@@ -180,10 +185,43 @@ function Missions() {
       if (employee.grade) return String(employee.grade);
     }
     
-    // Vérifier dans l'objet mission
     if (mission.employee?.grade) return String(mission.employee.grade);
     
     return "Non défini";
+  };
+
+  // Fonction pour les badges de statut (copiée du dashboard chef)
+  const getStatusBadge = (statut) => {
+    const statusConfig = {
+      'brouillon': { bg: 'bg-gray-100', text: 'text-gray-800', label: 'Brouillon' },
+      'en_attente': { bg: 'bg-yellow-100', text: 'text-yellow-800', label: '⏳ En attente' },
+      'valide': { bg: 'bg-green-100', text: 'text-green-800', label: '✓ Validée' },
+      'en_cours': { bg: 'bg-blue-100', text: 'text-blue-800', label: '🚗 En cours' },
+      'terminee': { bg: 'bg-slate-100', text: 'text-slate-800', label: '✓ Terminée' },
+      'annulee': { bg: 'bg-red-100', text: 'text-red-800', label: '✗ Annulée' },
+      'approuve': { bg: 'bg-green-100', text: 'text-green-800', label: '✓ Validée' },
+      'termine': { bg: 'bg-slate-100', text: 'text-slate-800', label: '✓ Terminée' },
+      'rejete': { bg: 'bg-red-100', text: 'text-red-800', label: '✗ Annulée' },
+    };
+
+    const config = statusConfig[statut] || statusConfig['brouillon'];
+
+    return (
+      <span className={`px-3 py-1 rounded-full text-xs font-bold ${config.bg} ${config.text}`}>
+        {config.label}
+      </span>
+    );
+  };
+
+  // Fonction pour les badges de transport (copiée du dashboard chef)
+  const getTransportBadge = (type) => {
+    if (type === 'voiture' || type === 'voiture de service') {
+      return <span className="px-2 py-1 bg-purple-100 text-purple-800 text-xs font-medium rounded">🚗 Voiture</span>;
+    }
+    if (type === 'car') {
+      return <span className="px-2 py-1 bg-blue-100 text-blue-800 text-xs font-medium rounded">🚌 Car</span>;
+    }
+    return <span className="px-2 py-1 bg-gray-100 text-gray-600 text-xs font-medium rounded">-</span>;
   };
 
   useEffect(() => {
@@ -229,7 +267,6 @@ function Missions() {
     setEditingMission(mission);
     const doti = getDoti(mission);
     
-    // Trouver l'employé correspondant pour pré-remplir le formulaire
     const employee = findEmployeeByDoti(doti);
     
     setFormData({
@@ -261,7 +298,6 @@ function Missions() {
         return;
       }
 
-      // Préparer les données pour l'API
       const updateData = {
         doti_id: formData.doti_id,
         fonction: formData.fonction,
@@ -277,7 +313,6 @@ function Missions() {
         statut: formData.statut
       };
 
-      // Nettoyer les données (supprimer les champs vides)
       Object.keys(updateData).forEach(key => {
         if (updateData[key] === null || updateData[key] === undefined || updateData[key] === '') {
           delete updateData[key];
@@ -286,7 +321,6 @@ function Missions() {
 
       console.log("Données envoyées à l'API:", updateData);
       
-      // Appeler l'API de mise à jour
       const response = await api.put(`/missions/${editingMission.id}`, updateData, {
         headers: {
           Authorization: `Bearer ${token}`,
@@ -296,10 +330,8 @@ function Missions() {
 
       console.log("Mission mise à jour:", response.data);
       
-      // Afficher un message de succès
       alert("Mission mise à jour avec succès !");
       
-      // Fermer le modal et recharger les missions
       handleCloseModal();
       await loadMissions();
       
@@ -342,7 +374,6 @@ function Missions() {
         return;
       }
 
-      // Appeler l'API de suppression
       const response = await api.delete(`/missions/${missionId}`, {
         headers: {
           Authorization: `Bearer ${token}`,
@@ -374,12 +405,234 @@ function Missions() {
     }
   };
 
+  // Fonction pour vérifier si une mission peut être imprimée
+  const canPrintMission = (mission) => {
+    // Si c'est une mission en voiture de service
+    if (mission.transport_type === 'voiture' || mission.transport_type === 'voiture de service') {
+      // Vérifier si un véhicule a été affecté
+      return mission.vehicle && mission.vehicle.id;
+    }
+    // Pour les autres types de transport, l'impression est toujours autorisée
+    return true;
+  };
+
+  // Fonction pour imprimer une mission (copiée du dashboard chef)
+  const handlePrint = (mission) => {
+    // Vérifier si l'impression est autorisée
+    if (!canPrintMission(mission)) {
+      alert('⚠️ L\'impression n\'est pas autorisée. Pour les missions en voiture de service, un véhicule doit être affecté.');
+      return;
+    }
+
+    const selectedEmploye = {
+      nom: getNom(mission),
+      prenom: getPrenom(mission)
+    };
+
+    const newMission = {
+      doti_id: getDoti(mission),
+      fonction: mission.fonction || "",
+      lieu_affectation: mission.lieu_affectation || "",
+      objectif: mission.objectif || "",
+      itineraire: mission.itineraire || "",
+      date_depart: mission.date_depart || "",
+      date_retour: mission.date_retour || "",
+      transport_type: mission.transport_type || "",
+      vehicle: mission.vehicle || null
+    };
+
+    const printWindow = window.open('', '_blank', 'width=800,height=600');
+    
+    if (!printWindow) {
+      alert('⚠️ Veuillez autoriser les pop-ups pour imprimer le document.');
+      return;
+    }
+
+    // Préparer les informations du véhicule si disponible
+    const vehicleInfo = newMission.vehicle ? 
+      `${newMission.vehicle.brand || ''} ${newMission.vehicle.model || ''} - ${newMission.vehicle.plate || ''}` : 
+      '';
+
+    const printContent = `
+      <!DOCTYPE html>
+      <html lang="fr">
+      <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Ordre de Mission</title>
+        <style>
+          @page {
+            size: A4;
+            margin: 20mm;
+          }
+          body {
+            font-family: 'Times New Roman', serif;
+            line-height: 1.5;
+            color: #000;
+            margin: 0;
+            padding: 0;
+          }
+          .print-container {
+            max-width: 210mm;
+            margin: 0 auto;
+            padding: 20mm;
+          }
+          .header {
+            text-align: center;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #000;
+            padding-bottom: 10px;
+          }
+          .header h1 {
+            font-size: 18pt;
+            margin: 5px 0;
+            font-weight: bold;
+          }
+          .header h2 {
+            font-size: 16pt;
+            margin: 10px 0;
+          }
+          .header h3 {
+            font-size: 14pt;
+            margin: 5px 0;
+            font-weight: normal;
+          }
+          .order-title {
+            text-align: center;
+            font-size: 20pt;
+            font-weight: bold;
+            text-decoration: underline;
+            margin: 20px 0;
+          }
+          .order-info {
+            margin-bottom: 20px;
+            font-size: 12pt;
+          }
+          .form-section {
+            margin-bottom: 15px;
+          }
+          .form-row {
+            display: flex;
+            align-items: baseline;
+            margin-bottom: 8px;
+          }
+          .form-label {
+            font-weight: bold;
+            min-width: 150px;
+          }
+          .form-value {
+            flex: 1;
+            border-bottom: 1px dotted #000;
+            padding-left: 10px;
+          }
+          .signature-section {
+            margin-top: 50px;
+            display: flex;
+            justify-content: space-between;
+          }
+          .signature-box {
+            text-align: center;
+            width: 40%;
+          }
+          .signature-line {
+            border-top: 1px solid #000;
+            width: 200px;
+            margin: 40px auto 5px;
+          }
+          @media print {
+            .no-print {
+              display: none !important;
+            }
+          }
+        </style>
+      </head>
+      <body>
+        <div class="print-container">
+          <div class="header">
+            <h1>ROYAUME DU MAROC</h1>
+            <h2>Ministère de l'Éducation Nationale, du Préscolaire et des Sports</h2>
+            <h3>Direction Provinciale de Ouarzazate</h3>
+          </div>
+          
+          <div class="order-title">
+            ORDRE DE MISSION
+          </div>
+          
+          <div class="order-info">
+            <div><strong>Employé:</strong> ${selectedEmploye ? `${selectedEmploye.nom} ${selectedEmploye.prenom}` : ''}</div>
+            <div><strong>DOTI:</strong> ${newMission.doti_id || ''}</div>
+            <div><strong>Fonction:</strong> ${newMission.fonction || ''}</div>
+          </div>
+          
+          <div class="form-section">
+            <div class="form-row">
+              <span class="form-label">Lieu d'Affectation :</span>
+              <span class="form-value">${newMission.lieu_affectation || ''}</span>
+            </div>
+            
+            <div class="form-row">
+              <span class="form-label">Objectif de la Mission :</span>
+              <span class="form-value">${newMission.objectif || ''}</span>
+            </div>
+            
+            <div class="form-row">
+              <span class="form-label">Itinéraire :</span>
+              <span class="form-value">${newMission.itineraire || ''}</span>
+            </div>
+            
+            <div class="form-row">
+              <span class="form-label">Date de Départ :</span>
+              <span class="form-value">${newMission.date_depart ? new Date(newMission.date_depart).toLocaleDateString('fr-FR') : ''}</span>
+            </div>
+            
+            <div class="form-row">
+              <span class="form-label">Date de Retour :</span>
+              <span class="form-value">${newMission.date_retour ? new Date(newMission.date_retour).toLocaleDateString('fr-FR') : ''}</span>
+            </div>
+            
+            <div class="form-row">
+              <span class="form-label">Moyen de Transport :</span>
+              <span class="form-value">${newMission.transport_type || ''} ${vehicleInfo ? `(${vehicleInfo})` : ''}</span>
+            </div>
+          </div>
+          
+          <div class="signature-section">
+            <div>
+              <p><strong>Fait à Ouarzazate le :</strong></p>
+              <p>${new Date().toLocaleDateString('fr-FR')}</p>
+            </div>
+            <div class="signature-box">
+              <div class="signature-line"></div>
+              <p><strong>Le Directeur provincial</strong></p>
+            </div>
+          </div>
+        </div>
+        
+        <script>
+          window.onload = function() {
+            setTimeout(function() {
+              window.print();
+              setTimeout(function() {
+                window.close();
+              }, 100);
+            }, 100);
+          };
+        </script>
+      </body>
+      </html>
+    `;
+
+    printWindow.document.open();
+    printWindow.document.write(printContent);
+    printWindow.document.close();
+  };
+
   // Fonction pour exporter en CSV
   const handleExportCSV = () => {
     const csvHeaders = ['ID', 'Employé', 'DOTI', 'Fonction', 'Lieu Affectation', 'Objectif', 'Date Départ', 'Date Retour', 'Statut', 'Transport'];
     const csvRows = filteredMissions.map(m => [
       m.id,
-      getNom(m),
+      `${getNom(m)} ${getPrenom(m)}`,
       getDoti(m),
       m.fonction || 'N/A',
       m.lieu_affectation || 'N/A',
@@ -408,19 +661,6 @@ function Missions() {
     return String(value).toLowerCase();
   };
 
-  // Mapper les statuts de l'API au format d'affichage
-  const formatStatut = (statut) => {
-    const statutMap = {
-      'en_attente': 'En Attente',
-      'approuve': 'Approuvées',
-      'en_cours': 'En Cours',
-      'termine': 'Terminées',
-      'rejete': 'Rejetées',
-      'brouillon': 'Brouillons'
-    };
-    return statutMap[statut] || statut;
-  };
-
   // Calculer les statistiques des onglets
   const tabs = [
     { key: "all", label: "Toutes les Missions", count: missions.length },
@@ -435,9 +675,9 @@ function Missions() {
       count: missions.filter((m) => m.statut === "en_attente").length,
     },
     {
-      key: "approuve",
-      label: "Approuvées",
-      count: missions.filter((m) => m.statut === "approuve").length,
+      key: "valide",
+      label: "Validées",
+      count: missions.filter((m) => m.statut === "valide" || m.statut === "approuve").length,
     },
     {
       key: "en_cours",
@@ -445,33 +685,45 @@ function Missions() {
       count: missions.filter((m) => m.statut === "en_cours").length,
     },
     {
-      key: "termine",
+      key: "terminee",
       label: "Terminées",
-      count: missions.filter((m) => m.statut === "termine").length,
+      count: missions.filter((m) => m.statut === "terminee" || m.statut === "termine").length,
     },
     {
-      key: "rejete",
-      label: "Rejetées",
-      count: missions.filter((m) => m.statut === "rejete").length,
+      key: "annulee",
+      label: "Annulées",
+      count: missions.filter((m) => m.statut === "annulee" || m.statut === "rejete").length,
     },
   ];
 
-  // Filtrer les missions selon les critères - VERSION CORRIGÉE
+  // Filtrer les missions selon les critères
   const filteredMissions = missions.filter((m) => {
     // Filtrer par onglet actif
     if (activeTab !== "all" && m.statut !== activeTab) {
+      // Gérer les statuts équivalents
+      if (activeTab === "valide" && (m.statut === "valide" || m.statut === "approuve")) {
+        return true;
+      }
+      if (activeTab === "terminee" && (m.statut === "terminee" || m.statut === "termine")) {
+        return true;
+      }
+      if (activeTab === "annulee" && (m.statut === "annulee" || m.statut === "rejete")) {
+        return true;
+      }
       return false;
     }
 
-    // Filtrer par recherche - Utilisation de safeToLower pour éviter les erreurs
+    // Filtrer par recherche
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
       
       if (
         !safeToLower(getNom(m)).includes(query) &&
+        !safeToLower(getPrenom(m)).includes(query) &&
         !safeToLower(getDoti(m)).includes(query) &&
         !safeToLower(m.lieu_affectation).includes(query) &&
-        !safeToLower(m.objectif).includes(query)
+        !safeToLower(m.objectif).includes(query) &&
+        !safeToLower(m.itineraire).includes(query)
       ) {
         return false;
       }
@@ -498,14 +750,6 @@ function Missions() {
 
     return true;
   });
-
-  const calculateDuration = (depart, retour) => {
-    if (!depart || !retour) return "";
-    const start = new Date(depart);
-    const end = new Date(retour);
-    const diff = Math.ceil((end - start) / (1000 * 60 * 60 * 24));
-    return `${diff} jour${diff > 1 ? "s" : ""}`;
-  };
 
   const formatDate = (dateString) => {
     if (!dateString) return "";
@@ -556,114 +800,100 @@ function Missions() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-slate-50 p-8">
       {/* Header */}
-      <div className="bg-white border-b border-gray-200">
-        <div className="px-8 py-6">
-          <div className="flex items-center justify-between mb-2">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900">
-                Gestion des Missions
-              </h1>
-              <p className="text-gray-500 mt-1">
-                Examiner et gérer les autorisations de voyage pour tout le personnel
-              </p>
-            </div>
-            <div className="flex gap-3">
-              <button
-                onClick={() => {
-                  loadEmployees();
-                  loadMissions();
-                }}
-                className="flex items-center gap-2 px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
-              >
-                <RefreshCw className="w-4 h-4" />
-                Actualiser
-              </button>
-              <button 
-                onClick={handleExportCSV}
-                className="flex items-center gap-2 px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
-              >
-                <Download className="w-4 h-4" />
-                Exporter CSV
-              </button>
-            </div>
+      <div className="mb-8">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold text-slate-800">Gestion des Missions</h1>
+            <p className="text-slate-600 mt-1">Tableau de bord complet des missions</p>
           </div>
-        </div>
-
-        {/* Tabs */}
-        <div className="px-8">
-          <div className="flex gap-1 border-b border-gray-200 overflow-x-auto">
-            {tabs.map((tab) => (
-              <button
-                key={tab.key}
-                onClick={() => setActiveTab(tab.key)}
-                className={`px-4 py-3 text-sm font-medium transition-colors relative whitespace-nowrap ${
-                  activeTab === tab.key
-                    ? "text-blue-600"
-                    : "text-gray-600 hover:text-gray-900"
-                }`}
-              >
-                {tab.label}
-                <span
-                  className={`ml-2 px-2 py-0.5 text-xs rounded-full ${
-                    activeTab === tab.key
-                      ? "bg-blue-100 text-blue-700"
-                      : "bg-gray-100 text-gray-600"
-                  }`}
-                >
-                  {tab.count}
-                </span>
-                {activeTab === tab.key && (
-                  <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600"></div>
-                )}
-              </button>
-            ))}
+          <div className="flex gap-3">
+            <button
+              onClick={() => {
+                loadEmployees();
+                loadMissions();
+              }}
+              className="px-4 py-2 bg-white border border-slate-200 text-slate-700 rounded-lg font-semibold hover:bg-slate-50 transition-colors flex items-center gap-2"
+            >
+              <RefreshCw className="w-4 h-4" />
+              Actualiser
+            </button>
+            <button 
+              onClick={handleExportCSV}
+              className="px-4 py-2 bg-white border border-slate-200 text-slate-700 rounded-lg font-semibold hover:bg-slate-50 transition-colors flex items-center gap-2"
+            >
+              <Download className="w-4 h-4" />
+              Exporter CSV
+            </button>
           </div>
         </div>
       </div>
 
-      {/* Content */}
-      <div className="px-8 py-6">
+      {/* Tabs */}
+      <div className="bg-white rounded-2xl shadow-xl border border-slate-200 overflow-hidden mb-8">
+        <div className="p-6 border-b border-slate-200 bg-gradient-to-r from-blue-50 to-white">
+          <div className="flex items-center justify-between">
+            <h2 className="text-xl font-bold text-slate-800">Liste des Missions</h2>
+            <div className="text-right">
+              <div className="text-xs text-slate-500">Mise à jour</div>
+              <div className="text-sm font-semibold text-slate-700">{new Date().toLocaleDateString('fr-FR')}</div>
+            </div>
+          </div>
+        </div>
+
+        <div className="p-6 border-b border-slate-200 bg-slate-50">
+          <div className="flex gap-2">
+            {tabs.map((tab) => (
+              <button
+                key={tab.key}
+                onClick={() => setActiveTab(tab.key)}
+                className={`px-4 py-2 rounded-lg font-semibold text-sm transition-all ${
+                  activeTab === tab.key
+                    ? 'bg-blue-50 text-blue-600 border-b-2 border-blue-600'
+                    : 'text-slate-600 hover:bg-slate-100'
+                }`}
+              >
+                {tab.label}
+                <span className={`ml-2 px-2 py-0.5 rounded-full text-xs ${
+                  activeTab === tab.key ? 'bg-blue-100' : 'bg-slate-100'
+                }`}>
+                  {tab.count}
+                </span>
+              </button>
+            ))}
+          </div>
+        </div>
+
         {/* Search and Filters */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 mb-6">
-          <div className="flex gap-4 items-center">
-            <div className="flex-1 relative">
+        <div className="p-6 border-b border-slate-100">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="relative">
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
               <input
                 type="text"
-                placeholder="Rechercher par DOTI, employé, destination, objectif..."
+                placeholder="Rechercher par nom, DOTI, destination, objectif..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full pl-12 pr-4 py-3 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
-              <svg
-                className="w-5 h-5 text-gray-400 absolute left-3 top-2.5"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-                />
-              </svg>
             </div>
-            <input
-              type="date"
-              value={dateFrom}
-              onChange={(e) => setDateFrom(e.target.value)}
-              placeholder="Date de début"
-              className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            />
-            <input
-              type="date"
-              value={dateTo}
-              onChange={(e) => setDateTo(e.target.value)}
-              placeholder="Date de fin"
-              className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            />
+            <div className="flex gap-2">
+              <input
+                type="date"
+                value={dateFrom}
+                onChange={(e) => setDateFrom(e.target.value)}
+                placeholder="Date de début"
+                className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+              <input
+                type="date"
+                value={dateTo}
+                onChange={(e) => setDateTo(e.target.value)}
+                placeholder="Date de fin"
+                className="w-full px-4 py-3 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+            </div>
             {(searchQuery || dateFrom || dateTo) && (
               <button
                 onClick={() => {
@@ -671,225 +901,139 @@ function Missions() {
                   setDateFrom("");
                   setDateTo("");
                 }}
-                className="px-4 py-2 text-sm text-gray-600 hover:text-gray-900 font-medium"
+                className="px-4 py-3 text-slate-600 hover:text-slate-900 font-medium bg-slate-100 hover:bg-slate-200 rounded-xl transition-colors"
               >
-                Réinitialiser
+                Réinitialiser les filtres
               </button>
             )}
           </div>
         </div>
 
-        {/* Missions Table */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-          <table className="w-full">
-            <thead>
-              <tr className="bg-gray-50 border-b border-gray-200">
-                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                  ID
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                  DOTI
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                  Fonction
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                  Itinéraire
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                  Dates
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                  Transport
-                </th>
-                <th className="px-6 py-3 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                  Actions
-                </th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-200">
-              {filteredMissions.length === 0 && (
-                <tr>
-                  <td
-                    colSpan="7"
-                    className="px-6 py-12 text-center"
-                  >
-                    <div className="flex flex-col items-center">
-                      <svg className="w-12 h-12 text-gray-300 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                      </svg>
-                      <p className="text-gray-500 font-medium">Aucune mission trouvée</p>
-                      <p className="text-gray-400 text-sm mt-1">
-                        {searchQuery || dateFrom || dateTo
-                          ? "Essayez de modifier vos filtres de recherche"
-                          : "Aucune mission n'a été créée pour le moment"}
-                      </p>
-                    </div>
-                  </td>
-                </tr>
-              )}
-              {filteredMissions.map((m, index) => {
-                const doti = getDoti(m);
-                const nom = getNom(m);
-                
-                return (
-                  <tr
-                    key={m.id}
-                    className="hover:bg-gray-50 transition-colors"
-                  >
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex flex-col">
-                        <span className="text-sm font-semibold text-gray-900">
-                          #{m.id}
-                        </span>
-                        <span className={`text-xs font-medium mt-1 ${
-                          m.statut === 'approuve' ? 'text-green-600' :
-                          m.statut === 'en_cours' ? 'text-blue-600' :
-                          m.statut === 'termine' ? 'text-gray-600' :
-                          m.statut === 'en_attente' ? 'text-yellow-600' :
-                          m.statut === 'brouillon' ? 'text-gray-400' :
-                          'text-red-600'
-                        }`}>
-                          {formatStatut(m.statut)}
-                        </span>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex flex-col">
-                        <div className="text-sm font-medium text-gray-900">
-                          {doti}
-                        </div>
-                        {nom !== "Non défini" && (
-                          <div className="text-xs text-gray-500 mt-0.5">
-                            {nom}
-                          </div>
-                        )}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className="text-sm text-gray-700">{m.fonction || "Non défini"}</span>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-2">
-                        <svg
-                          className="w-4 h-4 text-gray-400 flex-shrink-0"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
-                          />
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
-                          />
-                        </svg>
-                        <span className="text-sm font-medium text-gray-900">
-                          {m.itineraire || "Non défini"}
-                        </span>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-start gap-2">
-                        <svg
-                          className="w-4 h-4 text-gray-400 mt-0.5"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
-                          />
-                        </svg>
-                        <div>
-                          <div className="text-sm font-medium text-gray-900">
-                            {formatDate(m.date_depart)}
-                          </div>
-                          <div className="text-xs text-gray-500">
-                            au {formatDate(m.date_retour)}
-                          </div>
-                          <div className="text-xs text-gray-400 mt-0.5">
-                            {calculateDuration(m.date_depart, m.date_retour)}
-                          </div>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      {m.transport_type ? (
-                        <div className="flex items-center gap-2">
-                          <Truck className="w-4 h-4 text-blue-600" />
-                          <div>
-                            <div className="text-sm font-medium text-gray-900 capitalize">
-                              {m.transport_type}
-                            </div>
-                            {m.vehicle && (
-                              <div className="text-xs text-gray-500">
-                                {m.vehicle.marque} - {m.vehicle.immatriculation}
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      ) : (
-                        <span className="text-xs text-gray-400 italic">Non affecté</span>
-                      )}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-right">
-                      <div className="flex items-center justify-end gap-2">
-                        <button 
-                          onClick={() => handleEdit(m)}
-                          title="Modifier"
-                          className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                        >
-                          <Edit2 className="w-4 h-4" />
-                        </button>
-                        <button 
-                          onClick={() => handleDelete(m.id)}
-                          title="Supprimer"
-                          className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </div>
-                    </td>
+        {/* Missions Table - Copiée du dashboard chef */}
+        <div className="overflow-x-auto">
+          {filteredMissions.length === 0 ? (
+            <div className="p-12 text-center">
+              <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <svg className="w-8 h-8 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+              </div>
+              <h3 className="text-lg font-semibold text-slate-800 mb-2">Aucune mission trouvée</h3>
+              <p className="text-slate-500">
+                {searchQuery || dateFrom || dateTo
+                  ? "Essayez de modifier vos critères de recherche"
+                  : "Aucune mission n'a été créée pour le moment"}
+              </p>
+            </div>
+          ) : (
+            <>
+              <table className="min-w-full divide-y divide-slate-200">
+                <thead className="bg-slate-50">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">N° Mission</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">Employé</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">Itinéraire</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">Dates</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">Transport</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">Statut</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">Véhicule</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">Actions</th>
                   </tr>
-                );
-              })}
-            </tbody>
-          </table>
+                </thead>
+                <tbody className="bg-white divide-y divide-slate-100">
+                  {filteredMissions.map((mission) => (
+                    <tr key={mission.id} className="hover:bg-slate-50 transition-colors">
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span className="font-bold text-purple-900">M-{mission.id}</span>
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="text-sm text-slate-500">DOTI: {getDoti(mission)}</div>
+                      </td>
+                      <td className="px-6 py-4 max-w-xs">
+                        <span className="text-sm text-slate-700 line-clamp-1">{mission.itineraire}</span>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="text-sm text-slate-900">{formatDate(mission.date_depart)}</div>
+                        <div className="text-xs text-slate-500">au {formatDate(mission.date_retour)}</div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        {getTransportBadge(mission.transport_type)}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        {getStatusBadge(mission.statut)}
+                      </td>
+                      <td className="px-6 py-4">
+                        {mission.vehicle ? (
+                          <div className="text-sm">
+                            <div className="font-medium text-slate-900">
+                              {mission.vehicle.brand} {mission.vehicle.model}
+                            </div>
+                            <div className="text-slate-500">{mission.vehicle.plate}</div>
+                          </div>
+                        ) : mission.statut === 'en_attente' && (mission.transport_type === 'voiture' || mission.transport_type === 'voiture de service') ? (
+                          <span className="text-sm text-amber-600 font-medium">⏳ Affectation en cours</span>
+                        ) : (
+                          <span className="text-sm text-slate-400">-</span>
+                        )}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => handlePrint(mission)}
+                            className={`p-2 rounded-lg transition-colors ${
+                              canPrintMission(mission) 
+                                ? 'text-blue-600 hover:text-blue-800 hover:bg-blue-50' 
+                                : 'text-slate-300 hover:bg-slate-100 cursor-not-allowed'
+                            }`}
+                            title={canPrintMission(mission) ? "Imprimer" : "Impression non disponible - Véhicule non affecté"}
+                            disabled={!canPrintMission(mission)}
+                          >
+                            <Printer className="w-4 h-4" />
+                          </button>
+                          <button 
+                            onClick={() => handleEdit(mission)}
+                            className="p-2 text-slate-400 hover:text-green-600 hover:bg-green-50 rounded-lg transition-colors"
+                            title="Modifier"
+                          >
+                            <Edit2 className="w-4 h-4" />
+                          </button>
+                          <button 
+                            onClick={() => handleDelete(mission.id)}
+                            className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                            title="Supprimer"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
 
-          {/* Pagination Info */}
-          {filteredMissions.length > 0 && (
-            <div className="px-6 py-4 border-t border-gray-200 bg-gray-50">
-              <div className="flex items-center justify-between">
-                <p className="text-sm text-gray-600">
-                  Affichage de <span className="font-semibold">{filteredMissions.length}</span> mission(s) sur{" "}
-                  <span className="font-semibold">{missions.length}</span> au total
-                </p>
-                <div className="flex items-center gap-4 text-xs">
-                  <div className="flex items-center gap-2">
-                    <div className="w-2 h-2 rounded-full bg-yellow-500"></div>
-                    <span className="text-gray-600">En Attente: {missions.filter(m => m.statut === 'en_attente').length}</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className="w-2 h-2 rounded-full bg-green-500"></div>
-                    <span className="text-gray-600">Approuvées: {missions.filter(m => m.statut === 'approuve').length}</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className="w-2 h-2 rounded-full bg-blue-500"></div>
-                    <span className="text-gray-600">En Cours: {missions.filter(m => m.statut === 'en_cours').length}</span>
+              {/* Footer Summary */}
+              <div className="px-6 py-4 border-t border-slate-200 bg-slate-50">
+                <div className="flex items-center justify-between">
+                  <p className="text-sm text-slate-500">
+                    Total: <span className="font-semibold text-slate-700">{filteredMissions.length}</span> mission(s) sur {missions.length}
+                  </p>
+                  <div className="flex items-center gap-4 text-xs">
+                    <div className="flex items-center gap-2">
+                      <div className="w-2 h-2 rounded-full bg-yellow-500"></div>
+                      <span className="text-slate-600">En attente: {missions.filter(m => m.statut === 'en_attente').length}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="w-2 h-2 rounded-full bg-green-500"></div>
+                      <span className="text-slate-600">Validées: {missions.filter(m => m.statut === 'valide' || m.statut === 'approuve').length}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="w-2 h-2 rounded-full bg-blue-500"></div>
+                      <span className="text-slate-600">En cours: {missions.filter(m => m.statut === 'en_cours').length}</span>
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
+            </>
           )}
         </div>
       </div>

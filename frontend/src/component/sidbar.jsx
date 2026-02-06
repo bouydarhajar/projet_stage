@@ -68,19 +68,7 @@ export default function Sidebar() {
           <span className="font-medium">Employes (Order Mission)</span>
         </NavLink>
 
-        <NavLink
-          to="/chef-service/statistics"
-          className={({ isActive }) =>
-            `flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors ${
-              isActive 
-                ? "bg-blue-600 text-white" 
-                : "text-slate-300 hover:bg-slate-800 hover:text-white"
-            }`
-          }
-        >
-          <BarChart3 size={20} />
-          <span className="font-medium">Statistics</span>
-        </NavLink>
+
 
       </nav>
 

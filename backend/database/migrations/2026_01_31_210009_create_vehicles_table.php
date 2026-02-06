@@ -13,8 +13,12 @@ return new class extends Migration
     {
         Schema::create('vehicles', function (Blueprint $table) {
             $table->id();
-            $table->string('matricule')->unique();
-            $table->string('type');
+            $table->string('brand'); // Marque du véhicule
+            $table->string('model'); // Modèle
+            $table->string('plate')->unique(); // Plaque
+            $table->integer('seats'); // Nombre de places
+            $table->enum('status', ['available', 'on_mission', 'maintenance'])->default('available'); // Statut
+            $table->integer('current_mileage')->default(0); // Kilométrage actuel
             $table->timestamps();
         });
 

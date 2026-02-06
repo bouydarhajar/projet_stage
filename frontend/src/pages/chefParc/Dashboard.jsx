@@ -1,4 +1,3 @@
-// src/App.js
 import React, { useState, useEffect } from 'react';
 
 const ChefParc = () => {
@@ -8,114 +7,130 @@ const ChefParc = () => {
   const [showAssignmentModal, setShowAssignmentModal] = useState(false);
   const [showVehicleStatusModal, setShowVehicleStatusModal] = useState(false);
   const [selectedVehicleForStatus, setSelectedVehicleForStatus] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  // Données initiales
-  const initialMissions = [
-    {
-      id: 'M-8821',
-      requester: 'Ahmed Rami',
-      department: 'Inspection Division',
-      destination: 'Casablanca',
-      startDate: '2024-10-12',
-      endDate: '2024-10-14',
-      passengers: 3,
-      priority: 'HIGH',
-      status: 'pending'
-    },
-    {
-      id: 'M-8825',
-      requester: 'Sarah Mansouri',
-      department: 'Academic Affairs',
-      destination: 'Rabat',
-      startDate: '2024-10-15',
-      endDate: '2024-10-15',
-      passengers: 1,
-      priority: 'MEDIUM',
-      status: 'pending'
-    },
-    {
-      id: 'M-8830',
-      requester: 'Dr. Alami',
-      department: 'HR Department',
-      destination: 'Tangier',
-      startDate: '2024-10-16',
-      endDate: '2024-10-19',
-      passengers: 4,
-      priority: 'LOW',
-      status: 'pending'
-    }
-  ];
-
-  const initialVehicles = [
-    { id: 1, brand: 'Renault', model: 'Master', plate: '12456-A-1', seats: 7, status: 'available', currentMileage: 15200 },
-    { id: 2, brand: 'Peugeot', model: '308', plate: '12345-B-2', seats: 5, status: 'maintenance', currentMileage: 45000 },
-    { id: 3, brand: 'Toyota', model: 'Hilux', plate: 'B-122', seats: 5, status: 'available', currentMileage: 78000 },
-    { id: 4, brand: 'VW', model: 'Caddy', plate: 'C-45', seats: 7, status: 'available', currentMileage: 32000 }
-  ];
-
+  // Charger les données depuis l'API
   useEffect(() => {
-    setMissions(initialMissions);
-    setVehicles(initialVehicles);
+    fetchData();
   }, []);
+
+  const fetchData = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      const token = localStorage.getItem('token');
+      const headers = {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+      };
+
+      const [missionsResponse, vehiclesResponse] = await Promise.all([
+        fetch('http://localhost:8000/api/missions?for_chef_parc=true', { headers }),
+        fetch('http://localhost:8000/api/vehicles', { headers })
+      ]);
+
+      if (!missionsResponse.ok || !vehiclesResponse.ok) {
+        throw new Error('Erreur lors du chargement des données');
+      }
+
+      const missionsData = await missionsResponse.json();
+      const vehiclesData = await vehiclesResponse.json();
+
+      setMissions(missionsData);
+      setVehicles(vehiclesData);
+    } catch (err) {
+      setError(err.message);
+      console.error('Erreur:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleAssignMission = (mission) => {
     setSelectedMission(mission);
     setShowAssignmentModal(true);
   };
 
-  const handleConfirmAssignment = (assignmentData) => {
-    const updatedMissions = missions.map(mission => {
-      if (mission.id === assignmentData.missionId) {
-        return { 
-          ...mission, 
-          status: 'validated', 
-          assignedVehicleId: assignmentData.vehicleId,
-          startMileage: assignmentData.startMileage
-        };
+  const handleConfirmAssignment = async (assignmentData) => {
+    try {
+      const token = localStorage.getItem('token');
+      
+      // Valider la mission avec le véhicule assigné
+      const response = await fetch(`http://localhost:8000/api/missions/${assignmentData.missionId}/validate`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          vehicle_id: assignmentData.vehicleId,
+          start_mileage: assignmentData.startMileage
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error('Erreur lors de l\'assignation');
       }
-      return mission;
-    });
 
-    const updatedVehicles = vehicles.map(vehicle => {
-      if (vehicle.id === assignmentData.vehicleId) {
-        return { 
-          ...vehicle, 
-          status: 'on_mission',
-          currentMileage: assignmentData.startMileage
-        };
-      }
-      return vehicle;
-    });
+      const updatedMission = await response.json();
+      
+      alert(`Mission ${updatedMission.id} validée !\nNotification envoyée au demandeur.`);
 
-    const mission = missions.find(m => m.id === assignmentData.missionId);
-    const vehicle = vehicles.find(v => v.id === assignmentData.vehicleId);
-    
-    alert(`Mission ${mission.id} validée !\nVéhicule: ${vehicle.brand} ${vehicle.model} (${vehicle.plate})\nNotification envoyée au demandeur.`);
-
-    setMissions(updatedMissions);
-    setVehicles(updatedVehicles);
-    setShowAssignmentModal(false);
-    setSelectedMission(null);
+      // Rafraîchir les données
+      await fetchData();
+      
+      setShowAssignmentModal(false);
+      setSelectedMission(null);
+    } catch (err) {
+      console.error('Erreur:', err);
+      alert('Erreur lors de l\'assignation: ' + err.message);
+    }
   };
 
-  const handleUpdateVehicleStatus = (vehicle, newStatus) => {
-    const updatedVehicles = vehicles.map(v => {
-      if (v.id === vehicle.id) {
-        return { ...v, status: newStatus };
+  const handleUpdateVehicleStatus = async (vehicle, newStatus) => {
+    try {
+      const token = localStorage.getItem('token');
+      
+      const response = await fetch(`http://localhost:8000/api/vehicles/${vehicle.id}/status`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({ status: newStatus })
+      });
+
+      if (!response.ok) {
+        throw new Error('Erreur lors de la mise à jour du statut');
       }
-      return v;
-    });
-    
-    setVehicles(updatedVehicles);
-    setShowVehicleStatusModal(false);
-    setSelectedVehicleForStatus(null);
-    
-    alert(`Statut du véhicule ${vehicle.plate} mis à jour: ${getStatusText(newStatus)}`);
+
+      const updatedVehicle = await response.json();
+      
+      // Mettre à jour l'état local
+      setVehicles(vehicles.map(v => 
+        v.id === updatedVehicle.id ? updatedVehicle : v
+      ));
+      
+      setShowVehicleStatusModal(false);
+      setSelectedVehicleForStatus(null);
+      
+      alert(`Statut du véhicule ${vehicle.plate} mis à jour: ${getStatusText(newStatus)}`);
+    } catch (err) {
+      console.error('Erreur:', err);
+      alert('Erreur lors de la mise à jour: ' + err.message);
+    }
   };
 
   const handleOpenStatusModal = (vehicle) => {
     setSelectedVehicleForStatus(vehicle);
     setShowVehicleStatusModal(true);
+  };
+
+  const handleRefresh = async () => {
+    await fetchData();
+    alert('Liste actualisée avec succès');
   };
 
   const getAvailableVehicles = () => {
@@ -149,8 +164,41 @@ const ChefParc = () => {
     }
   };
 
-  const pendingMissions = missions.filter(mission => mission.status === 'pending');
-  const activeMissions = missions.filter(mission => mission.status === 'validated');
+  const pendingMissions = missions.filter(mission => mission.statut === 'en_attente');
+  const activeMissions = missions.filter(mission => mission.statut === 'valide' || mission.statut === 'en_cours');
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-16 h-16 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-gray-600 font-semibold">Chargement des données...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="bg-white rounded-2xl shadow-xl border border-red-200 p-8 max-w-md">
+          <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <svg className="w-8 h-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          </div>
+          <h3 className="text-xl font-bold text-gray-800 mb-2 text-center">Erreur de chargement</h3>
+          <p className="text-gray-600 text-center mb-4">{error}</p>
+          <button
+            onClick={fetchData}
+            className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-colors"
+          >
+            Réessayer
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -187,7 +235,7 @@ const ChefParc = () => {
               <h2 className="text-xl font-bold text-gray-800">Ordres de Mission en Attente</h2>
               <button 
                 className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg text-sm font-medium transition-colors"
-                onClick={() => alert('Liste actualisée')}
+                onClick={handleRefresh}
               >
                 Actualiser
               </button>
@@ -202,19 +250,16 @@ const ChefParc = () => {
                     N° Mission
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Demandeur & Service
+                    Employé & DOTI
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Destination
+                    Objectif
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Itinéraire
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Dates
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    PAX
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Priorité
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Action
@@ -225,30 +270,23 @@ const ChefParc = () => {
                 {pendingMissions.map(mission => (
                   <tr key={mission.id} className="hover:bg-gray-50 transition-colors">
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <span className="font-bold text-blue-900">{mission.id}</span>
+                      <span className="font-bold text-blue-900">M-{mission.id}</span>
                     </td>
                     <td className="px-6 py-4">
                       <div>
-                        <div className="font-medium text-gray-900">{mission.requester}</div>
-                        <div className="text-sm text-gray-500">{mission.department}</div>
+                        <div className="font-medium text-gray-900">{mission.employe?.nom} {mission.employe?.prenom}</div>
+                        <div className="text-sm text-gray-500">DOTI: {mission.doti_id}</div>
                       </div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-gray-900">
-                      {mission.destination}
+                    <td className="px-6 py-4">
+                      <span className="text-sm text-gray-900">{mission.objectif}</span>
+                    </td>
+                    <td className="px-6 py-4">
+                      <span className="text-sm text-gray-900">{mission.itineraire}</span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-gray-900">{mission.startDate}</div>
-                      <div className="text-sm text-gray-500">au {mission.endDate}</div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-center">
-                      <span className="inline-flex items-center justify-center w-8 h-8 bg-blue-100 text-blue-800 font-bold rounded-full">
-                        {mission.passengers}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`px-3 py-1 rounded-full text-xs font-bold text-white ${getPriorityColor(mission.priority)}`}>
-                        {mission.priority}
-                      </span>
+                      <div className="text-gray-900">{mission.date_depart}</div>
+                      <div className="text-sm text-gray-500">au {mission.date_retour}</div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <button 
@@ -260,6 +298,13 @@ const ChefParc = () => {
                     </td>
                   </tr>
                 ))}
+                {pendingMissions.length === 0 && (
+                  <tr>
+                    <td colSpan="6" className="px-6 py-12 text-center text-gray-500">
+                      Aucune mission en attente
+                    </td>
+                  </tr>
+                )}
               </tbody>
             </table>
           </div>
@@ -296,7 +341,7 @@ const ChefParc = () => {
                       </div>
                       <div className="flex justify-between">
                         <span className="text-gray-500 text-sm">Kilométrage:</span>
-                        <span className="font-medium">{vehicle.currentMileage.toLocaleString()} km</span>
+                        <span className="font-medium">{vehicle.current_mileage?.toLocaleString()} km</span>
                       </div>
                     </div>
                     
@@ -320,11 +365,11 @@ const ChefParc = () => {
             <div className="p-6">
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {activeMissions.map(mission => {
-                  const assignedVehicle = vehicles.find(v => v.id === mission.assignedVehicleId);
+                  const assignedVehicle = vehicles.find(v => v.id === mission.vehicle_id);
                   return (
                     <div key={mission.id} className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow border-l-4 border-l-green-500">
                       <div className="flex justify-between items-start mb-3">
-                        <h3 className="font-bold text-lg text-gray-800">Mission {mission.id}</h3>
+                        <h3 className="font-bold text-lg text-gray-800">Mission M-{mission.id}</h3>
                         <span className="px-3 py-1 bg-green-100 text-green-800 text-xs font-bold rounded-full">
                           EN COURS
                         </span>
@@ -332,12 +377,16 @@ const ChefParc = () => {
                       
                       <div className="space-y-2">
                         <div className="flex">
-                          <span className="text-gray-500 text-sm w-24">Destination:</span>
-                          <span className="font-medium">{mission.destination}</span>
+                          <span className="text-gray-500 text-sm w-24">Employé:</span>
+                          <span className="font-medium">{mission.employe?.nom} {mission.employe?.prenom}</span>
+                        </div>
+                        <div className="flex">
+                          <span className="text-gray-500 text-sm w-24">Objectif:</span>
+                          <span className="font-medium text-sm">{mission.objectif}</span>
                         </div>
                         <div className="flex">
                           <span className="text-gray-500 text-sm w-24">Dates:</span>
-                          <span className="font-medium">{mission.startDate} - {mission.endDate}</span>
+                          <span className="font-medium">{mission.date_depart} - {mission.date_retour}</span>
                         </div>
                         <div className="flex">
                           <span className="text-gray-500 text-sm w-24">Véhicule:</span>
@@ -345,10 +394,10 @@ const ChefParc = () => {
                             {assignedVehicle ? `${assignedVehicle.brand} ${assignedVehicle.model}` : 'Non attribué'}
                           </span>
                         </div>
-                        {mission.startMileage && (
+                        {mission.start_mileage && (
                           <div className="flex">
                             <span className="text-gray-500 text-sm w-24">Km départ:</span>
-                            <span className="font-medium">{mission.startMileage.toLocaleString()} km</span>
+                            <span className="font-medium">{mission.start_mileage.toLocaleString()} km</span>
                           </div>
                         )}
                       </div>
@@ -368,7 +417,7 @@ const ChefParc = () => {
             {/* Header */}
             <div className="bg-gradient-to-r from-blue-900 to-blue-800 text-white p-6">
               <div className="flex justify-between items-center">
-                <h2 className="text-xl font-bold">Attribuer un véhicule - Mission {selectedMission.id}</h2>
+                <h2 className="text-xl font-bold">Attribuer un véhicule - Mission M-{selectedMission.id}</h2>
                 <button 
                   onClick={() => {
                     setShowAssignmentModal(false);
@@ -388,24 +437,24 @@ const ChefParc = () => {
                 <h3 className="font-bold text-lg text-gray-800 mb-3">Détails de la mission</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <div className="text-sm text-gray-500">Demandeur</div>
-                    <div className="font-medium">{selectedMission.requester}</div>
+                    <div className="text-sm text-gray-500">Employé</div>
+                    <div className="font-medium">{selectedMission.employe?.nom} {selectedMission.employe?.prenom}</div>
                   </div>
                   <div>
-                    <div className="text-sm text-gray-500">Service</div>
-                    <div className="font-medium">{selectedMission.department}</div>
+                    <div className="text-sm text-gray-500">DOTI</div>
+                    <div className="font-medium">{selectedMission.doti_id}</div>
                   </div>
                   <div>
-                    <div className="text-sm text-gray-500">Destination</div>
-                    <div className="font-medium">{selectedMission.destination}</div>
+                    <div className="text-sm text-gray-500">Objectif</div>
+                    <div className="font-medium">{selectedMission.objectif}</div>
                   </div>
                   <div>
-                    <div className="text-sm text-gray-500">Passagers</div>
-                    <div className="font-medium">{selectedMission.passengers}</div>
+                    <div className="text-sm text-gray-500">Itinéraire</div>
+                    <div className="font-medium">{selectedMission.itineraire}</div>
                   </div>
                   <div className="md:col-span-2">
                     <div className="text-sm text-gray-500">Dates</div>
-                    <div className="font-medium">{selectedMission.startDate} - {selectedMission.endDate}</div>
+                    <div className="font-medium">{selectedMission.date_depart} - {selectedMission.date_retour}</div>
                   </div>
                 </div>
               </div>
@@ -511,11 +560,11 @@ const ChefParc = () => {
 
 // Vehicle Option Component
 const VehicleOption = ({ vehicle, mission, onConfirm }) => {
-  const [startMileage, setStartMileage] = useState(vehicle.currentMileage.toString());
+  const [startMileage, setStartMileage] = useState(vehicle.current_mileage?.toString() || '0');
 
   const handleAssign = () => {
-    if (!startMileage || isNaN(startMileage) || parseInt(startMileage) < vehicle.currentMileage) {
-      alert(`Veuillez saisir un kilométrage valide (minimum: ${vehicle.currentMileage} km)`);
+    if (!startMileage || isNaN(startMileage) || parseInt(startMileage) < (vehicle.current_mileage || 0)) {
+      alert(`Veuillez saisir un kilométrage valide (minimum: ${vehicle.current_mileage || 0} km)`);
       return;
     }
 
@@ -532,7 +581,7 @@ const VehicleOption = ({ vehicle, mission, onConfirm }) => {
         <div>
           <h4 className="font-bold text-lg text-gray-800">{vehicle.brand} {vehicle.model}</h4>
           <p className="text-gray-600">{vehicle.plate} • {vehicle.seats} places</p>
-          <p className="text-sm text-gray-500 mt-1">Kilométrage actuel: {vehicle.currentMileage.toLocaleString()} km</p>
+          <p className="text-sm text-gray-500 mt-1">Kilométrage actuel: {vehicle.current_mileage?.toLocaleString() || 0} km</p>
         </div>
         <span className="mt-2 md:mt-0 px-3 py-1 bg-green-100 text-green-800 text-sm font-medium rounded-full">
           DISPONIBLE
@@ -549,14 +598,14 @@ const VehicleOption = ({ vehicle, mission, onConfirm }) => {
               type="number"
               value={startMileage}
               onChange={(e) => setStartMileage(e.target.value)}
-              min={vehicle.currentMileage}
+              min={vehicle.current_mileage || 0}
               className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               placeholder="Saisir le kilométrage"
             />
             <span className="text-gray-500 font-medium w-10">km</span>
           </div>
           <p className="text-xs text-gray-500 mt-1">
-            Minimum: {vehicle.currentMileage.toLocaleString()} km
+            Minimum: {vehicle.current_mileage?.toLocaleString() || 0} km
           </p>
         </div>
 
