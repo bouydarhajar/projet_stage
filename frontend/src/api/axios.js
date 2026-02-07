@@ -12,5 +12,5 @@ import axios from "axios";
     return config;
     });
 
-    export default api;
+export default api;
 

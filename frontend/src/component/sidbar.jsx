@@ -1,5 +1,7 @@
 import { NavLink } from "react-router-dom";
-import { LayoutDashboard, MapPin, Users, Car, BarChart3, Settings, LogOut } from "lucide-react";
+import { LayoutDashboard, MapPin, Users,Settings} from "lucide-react";
+import LogoutButton from "./Logout";
+
 
 export default function Sidebar() {
   return (
@@ -75,15 +77,16 @@ export default function Sidebar() {
       {/* Bottom Section */}
       <div className="p-4 space-y-1 border-t border-slate-800">
         
-        <button className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-300 hover:bg-slate-800 hover:text-white transition-colors w-full">
+        <NavLink to="/chef-service/settings"
+          className={({ isActive }) =>
+            `flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors ${
+              isActive ? "bg-blue-600 text-white" : "text-slate-300 hover:bg-slate-800 hover:text-white"}`
+            }>
           <Settings size={20} />
           <span className="font-medium">Settings</span>
-        </button>
+        </NavLink>
 
-        <button className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-300 hover:bg-slate-800 hover:text-white transition-colors w-full">
-          <LogOut size={20} />
-          <span className="font-medium">Logout</span>
-        </button>
+        <LogoutButton /> 
 
       </div>
     </div>

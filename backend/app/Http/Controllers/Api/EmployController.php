@@ -6,7 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Employe;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Http\Request;
-use Illuminate\Http\Resources\Json\JsonResource;
+use Symfony\Component\HttpFoundation\Response;
 
 class EmployController extends Controller
 {
@@ -26,11 +26,9 @@ class EmployController extends Controller
     /**
      * Mettre à jour un employé
      *
-     * @param Request $request
-     * @param int $id
-     * @return JsonResponse
+     
      */
-    public function update(Request $request, $id): JsonResource
+    public function update(Request $request, $id): Response
     {
         $validator = Validator::make($request->all(), [
             'nom' => 'sometimes|required|string|max:255',
@@ -43,24 +41,24 @@ class EmployController extends Controller
         ]);
 
         if ($validator->fails()) {
-            return new JsonResource([
+            return response()->json([
                 'message' => 'Erreur de validation',
                 'errors' => $validator->errors()
-            ]);
+            ], 422);
         }
 
         try {
             $employe = Employe::findOrFail($id);
             $employe->update($request->all());
-            return new JsonResource([
+            return response()->json([
                 'message' => 'Employé mis à jour avec succès',
                 'data' => $employe
             ]);
         } catch (\Exception $e) {
-            return new JsonResource([
+            return response()->json([
                 'message' => 'Erreur lors de la mise à jour de l\'employé',
                 'error' => $e->getMessage()
-            ]);
+            ], 500);
         }
     }
      /**
@@ -69,17 +67,17 @@ class EmployController extends Controller
      * @param int $id
      * @return JsonResponse
      */
-    public function destroy($id): JsonResource
+    public function destroy($id):Response
     {
         try {
             $employe = Employe::findOrFail($id);
             $employe->delete();
 
-            return new JsonResource([
+            return response()->json([
                 'message' => 'Employé supprimé avec succès'
             ], 200);
         } catch (\Exception $e) {
-            return new JsonResource([
+            return response()->json([
                 'message' => 'Erreur lors de la suppression de l\'employé',
                 'error' => $e->getMessage()
             ], 500);

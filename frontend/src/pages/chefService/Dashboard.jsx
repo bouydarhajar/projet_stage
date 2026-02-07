@@ -5,20 +5,7 @@ import Sidebar from "../../component/sidbar";
 import TopBar from "../../component/Topbar";
 import Missions from "./Missions";
 
-import {
-  Users,
-  Car,
-  MapPin,
-  Calendar,
-  Pencil,
-  Trash2,
-  TrendingUp,
-  TrendingDown,
-  AlertCircle,
-  FileText,
-  CheckCircle,
-  Clock
-} from "lucide-react";
+import { Car,  MapPin, TrendingUp, TrendingDown, AlertCircle, FileText,} from "lucide-react";
 import Employes from "./employes";
 
 function Home() {
@@ -129,14 +116,11 @@ function Home() {
   // Charger les données au démarrage
   useEffect(() => {
     loadMissions();
-    
     // Rafraîchir les données toutes les 30 secondes
     const intervalId = setInterval(loadMissions, 30000);
-    
-    return () => clearInterval(intervalId);
-  }, []);
-
-  if (loading) {
+    return () => clearInterval(intervalId); },[]
+  );
+    if (loading) {
     return (
       <div className="p-6">
         <div className="flex items-center justify-center min-h-[400px]">

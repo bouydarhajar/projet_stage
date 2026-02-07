@@ -10,6 +10,9 @@ class Employe extends Model
     use HasFactory;
 
     protected $table = 'employes';
+    protected $primaryKey = 'Doti';
+    public $incrementing = false;
+    protected $keyType = 'string';
 
     protected $fillable = [
         'Doti',
@@ -27,5 +30,5 @@ class Employe extends Model
         //                                     ↑           ↑
         //                            clé dans missions   clé dans employes
     }
-
+    
 }

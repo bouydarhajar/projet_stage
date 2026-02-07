@@ -1,7 +1,7 @@
 // src/components/Missions.jsx
 import React, { useEffect, useState } from "react";
 import api from '../../api/axios';
-import { Edit2, Trash2, RefreshCw, Download, Truck, X, Save, Calendar, Clock, MapPin, User, Car, Users, Printer, Search, Filter } from "lucide-react";
+import { Edit2, Trash2, RefreshCw, Download, X, Save, Calendar, Clock, Car, Users, Printer, Search, } from "lucide-react";
 
 function Missions() {
   const [missions, setMissions] = useState([]);
@@ -78,8 +78,7 @@ function Missions() {
         },
       });
       
-      console.log("Réponse API missions:", res.data);
-      
+      console.log("Réponse API missions:", res.data);      
       const missionsData = Array.isArray(res.data) ? res.data : [];
       setMissions(missionsData);
       
@@ -136,18 +135,28 @@ function Missions() {
   };
 
   // Fonction utilitaire pour extraire le nom d'une mission
-  const getNom = (mission) => {
-    const doti = getDoti(mission);
-    const employee = findEmployeeByDoti(doti);
-    
-    if (employee) {
-      if (employee.nom) return String(employee.nom);
-    }
-    
-    if (mission.employee?.nom) return String(mission.employee.nom);
-    
-    return "Non défini";
-  };
+   // Fonction utilitaire pour extraire le nom d'une mission
+const getNom = (mission) => {
+  // Vérifier d'abord si la relation employee existe
+  if (mission?.employee?.nom) {
+    return String(mission.employee.nom);
+  }
+
+  // Sinon, chercher dans la liste des employés par DOTI
+  const doti = getDoti(mission);
+  const employee = findEmployeeByDoti(doti);
+
+  if (employee?.nom) {
+    return String(employee.nom);
+  }
+
+  // Debug: afficher ce qui est disponible
+  console.warn("Nom non trouvé pour la mission:", mission);
+  console.warn("DOTI:", doti);
+  console.warn("Employee trouvé:", employee);
+
+  return "Non défini";
+};
 
   // Fonction utilitaire pour extraire le prénom d'une mission
   const getPrenom = (mission) => {
@@ -266,8 +275,6 @@ function Missions() {
   const handleEdit = (mission) => {
     setEditingMission(mission);
     const doti = getDoti(mission);
-    
-    const employee = findEmployeeByDoti(doti);
     
     setFormData({
       doti_id: doti !== "Non défini" ? doti : "",

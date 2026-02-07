@@ -155,15 +155,6 @@ const ChefParc = () => {
     }
   };
 
-  const getPriorityColor = (priority) => {
-    switch(priority) {
-      case 'HIGH': return 'bg-red-500';
-      case 'MEDIUM': return 'bg-yellow-500';
-      case 'LOW': return 'bg-green-500';
-      default: return 'bg-gray-500';
-    }
-  };
-
   const pendingMissions = missions.filter(mission => mission.statut === 'en_attente');
   const activeMissions = missions.filter(mission => mission.statut === 'valide' || mission.statut === 'en_cours');
 
